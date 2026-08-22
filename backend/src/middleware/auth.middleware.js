@@ -48,6 +48,10 @@ const requireAuth = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, 'The user belonging to this token no longer exists');
   }
 
+  if (user.isActive === false) {
+    throw new ApiError(403, 'Your account has been deactivated. Please contact support.');
+  }
+
   // 5. Attach sanitized user (without passwordHash) to request
   req.user = sanitizeUser(user);
 

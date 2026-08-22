@@ -13,6 +13,11 @@ datasource db {
 // ENUMS
 // ==========================================
 
+enum Role {
+  USER
+  ADMIN
+}
+
 enum TripStatus {
   ONGOING
   UPCOMING
@@ -55,6 +60,8 @@ model User {
   country      String?
   bio          String?
   language     String?   @default("en")
+  role         Role      @default(USER)
+  isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
