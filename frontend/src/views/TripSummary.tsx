@@ -231,7 +231,7 @@ export const TripSummary: React.FC = () => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>VoyageIQ Trip Report - ${activeTrip.title}</title>
+  <title>VoyageIQ Trip Report - ${activeTrip.name}</title>
   <style>
     body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; padding: 2rem; max-width: 900px; margin: 0 auto; line-height: 1.6; }
     .header { text-align: center; border-bottom: 3px solid #6366f1; padding-bottom: 1.5rem; margin-bottom: 2rem; }
@@ -255,7 +255,7 @@ export const TripSummary: React.FC = () => {
 <body>
   <div class="header">
     <h1>VoyageIQ Trip Report</h1>
-    <p style="font-size: 1.2rem; font-weight: 800; color: #1e293b; margin-top: 8px;">${activeTrip.title}</p>
+    <p style="font-size: 1.2rem; font-weight: 800; color: #1e293b; margin-top: 8px;">${activeTrip.name}</p>
     <p>${destNames} | ${activeTrip.startDate} to ${activeTrip.endDate} (${totalDays} Days)</p>
   </div>
 
@@ -270,7 +270,7 @@ export const TripSummary: React.FC = () => {
     </div>
     <div class="card">
       <div class="card-title">Travelers & Style</div>
-      <div class="card-value" style="font-size: 1.1rem; padding-top: 6px;">${activeTrip.travelers || 1} Person (${activeTrip.travelStyle || 'Balanced'})</div>
+      <div class="card-value" style="font-size: 1.1rem; padding-top: 6px;">${activeTrip.travelersCount || 1} Person (${activeTrip.travelStyle || 'Balanced'})</div>
     </div>
   </div>
 
@@ -287,8 +287,8 @@ export const TripSummary: React.FC = () => {
     <tbody>
       ${allActivities.map(act => `
         <tr>
-          <td><strong>Day ${act.dayNumber}</strong> - ${act.time || 'All Day'}</td>
-          <td><strong>${act.title}</strong><br><small style="color:#64748b;">${act.description || ''}</small></td>
+          <td><strong>${act.date}</strong> - ${act.time || 'All Day'}</td>
+          <td><strong>${act.title}</strong><br><small style="color:#64748b;">${act.notes || act.location || ''}</small></td>
           <td><span class="badge">${act.category}</span></td>
           <td><strong>${act.cost > 0 ? symbol + act.cost.toLocaleString() : 'Free'}</strong></td>
         </tr>
@@ -312,7 +312,7 @@ export const TripSummary: React.FC = () => {
       const blob = new Blob([reportHtml], { type: 'text/html;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const safeTitle = (activeTrip.title || 'Trip').replace(/[^a-zA-Z0-9]/g, '_');
+      const safeTitle = (activeTrip.name || 'Trip').replace(/[^a-zA-Z0-9]/g, '_');
       link.href = url;
       link.setAttribute('download', `VoyageIQ_Report_${safeTitle}.html`);
       document.body.appendChild(link);

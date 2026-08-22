@@ -125,6 +125,36 @@ export const Login: React.FC = () => {
     if (!isValid) return;
 
     setIsLoading(true);
+
+    // ── Admin offline bypass (works when DB / backend is unreachable) ─────────
+    const ADMIN_EMAIL = 'admin@voyageiq.com';
+    const ADMIN_PASS  = 'Admin@123';
+    if (loginEmail.trim().toLowerCase() === ADMIN_EMAIL && loginPassword === ADMIN_PASS) {
+      setIsLoading(false);
+      setIsSuccess(true);
+      setTimeout(() => {
+        loginUserDirectly('admin_local_token_' + Date.now(), {
+          id: 'admin-local-001',
+          firstName: 'Admin',
+          lastName: 'VoyageIQ',
+          email: ADMIN_EMAIL,
+          phone: '',
+          city: '',
+          country: '',
+          avatarUrl: null,
+          preferences: [] as TravelPreference[],
+          travelStyle: 'Balanced' as TravelStyle,
+          language: 'English',
+          joinedAt: '2025-01-01',
+          role: 'ADMIN',
+        });
+        setCurrentView('dashboard');
+        showToast('Welcome back, Admin! 🛡️', 'success');
+      }, 400);
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     try {
       const response = await api.auth.login({
         email: loginEmail.trim(),
@@ -139,20 +169,21 @@ export const Login: React.FC = () => {
       setIsSuccess(true);
       setTimeout(() => {
         const mockUser = {
-          id: 'user-1',
-          firstName: loginEmail.split('@')[0],
-          lastName: 'Patel',
-          email: loginEmail,
-          phone: '+91 98765 43210',
-          city: 'Mumbai',
-          country: 'India',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-          preferences: ['Adventure', 'Culture', 'Food'] as TravelPreference[],
-          travelStyle: 'Balanced' as TravelStyle,
-          language: 'English',
-          joinedAt: '2025-01-15',
+          id: response.user?.id || 'user-1',
+          firstName: response.user?.firstName || loginEmail.split('@')[0],
+          lastName: response.user?.lastName || 'Patel',
+          email: response.user?.email || loginEmail,
+          phone: response.user?.phone || '+91 98765 43210',
+          city: response.user?.city || 'Mumbai',
+          country: response.user?.country || 'India',
+          avatarUrl: response.user?.profileImage || response.user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+          preferences: response.user?.preferences || ['Adventure', 'Culture', 'Food'] as TravelPreference[],
+          travelStyle: response.user?.travelStyle || 'Balanced' as TravelStyle,
+          language: response.user?.language || 'English',
+          joinedAt: response.user?.createdAt || '2025-01-15',
+          role: response.user?.role || 'USER',
         };
-        loginUserDirectly('mock_token_' + Date.now(), mockUser);
+        loginUserDirectly(response.token || ('mock_token_' + Date.now()), mockUser);
         setCurrentView('dashboard');
         showToast(`Welcome back${response.user?.firstName ? ', ' + response.user.firstName : ''}! Ready for your next trip?`, 'success');
       }, 500);
@@ -163,6 +194,7 @@ export const Login: React.FC = () => {
       setLoginPasswordError(msg);
     }
   };
+
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -5,7 +5,7 @@ import { mockTrips, mockCommunityPosts, mockInsights } from '../data/mockData';
 export type ViewType =
   | 'dashboard' | 'my-trips' | 'plan-trip' | 'explore' | 'community'
   | 'calendar'  | 'trip-summary' | 'things-to-do' | 'profile' | 'shared-trip'
-  | 'insights'  | 'cost-calculator';
+  | 'insights'  | 'cost-calculator' | 'admin';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Types
@@ -41,6 +41,7 @@ export interface CurrentUser {
   travelStyle: 'Budget' | 'Balanced' | 'Luxury';
   language: string;
   joinedAt: string;
+  role?: string;
 }
 
 interface AppContextType {
@@ -52,6 +53,7 @@ interface AppContextType {
   currentUser: CurrentUser;
   updateUser: (updates: Partial<CurrentUser>) => void;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   setIsAuthenticated: (val: boolean) => void;
   loginUserDirectly: (token: string, user: CurrentUser) => void;
   logoutUser: () => void;
@@ -112,6 +114,7 @@ const DEFAULT_USER: CurrentUser = {
   travelStyle: 'Balanced',
   language: 'English',
   joinedAt: '2025-01-15',
+  role: 'USER',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -407,7 +410,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentView, setCurrentView,
       currentUser, updateUser,
-      isAuthenticated, setIsAuthenticated, loginUserDirectly, logoutUser,
+      isAuthenticated, isAdmin: currentUser.role === 'ADMIN', setIsAuthenticated, loginUserDirectly, logoutUser,
       trips, activeTripId, setActiveTripId,
       addTrip, updateTrip, deleteTrip,
       addCityToTrip, removeCityFromTrip,

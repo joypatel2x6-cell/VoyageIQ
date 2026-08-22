@@ -15,7 +15,8 @@ export const Navbar: React.FC = () => {
     markAllNotificationsRead,
     currentUser,
     setActiveTripId,
-    logoutUser
+    logoutUser,
+    isAdmin,
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -503,6 +504,27 @@ export const Navbar: React.FC = () => {
                     {option.label}
                   </button>
                 ))}
+                {isAdmin && (
+                  <>
+                    <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+                    <button
+                      onClick={() => {
+                        setCurrentView('admin' as ViewType);
+                        setShowProfileDropdown(false);
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '8px 16px', fontSize: '13.5px', fontWeight: 700,
+                        color: '#2563EB', border: 'none', backgroundColor: 'transparent',
+                        textAlign: 'left', cursor: 'pointer', transition: 'background-color 0.15s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#EFF6FF'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      🛡️ Admin Panel
+                    </button>
+                  </>
+                )}
                 <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
                 <button
                   onClick={() => {

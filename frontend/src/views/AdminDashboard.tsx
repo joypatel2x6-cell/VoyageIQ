@@ -88,6 +88,16 @@ interface AdminUser {
   totalSpend: number;
 }
 
+const MOCK_USERS: AdminUser[] = [
+  { id: '1', name: 'Ayush Patel', email: 'ayush@voyageiq.com', country: 'India', trips: 12, joined: '2025-01-15', status: 'active', avatar: 'AP', totalSpend: 3450 },
+  { id: '2', name: 'Sophia Chen', email: 'sophia.c@example.com', country: 'Singapore', trips: 8, joined: '2025-02-01', status: 'active', avatar: 'SC', totalSpend: 2890 },
+  { id: '3', name: 'Liam Walker', email: 'liam.w@example.com', country: 'Australia', trips: 5, joined: '2025-02-10', status: 'active', avatar: 'LW', totalSpend: 1650 },
+  { id: '4', name: 'Emma Watson', email: 'emma.w@example.com', country: 'UK', trips: 15, joined: '2024-11-20', status: 'active', avatar: 'EW', totalSpend: 4920 },
+  { id: '5', name: 'Marco Rossi', email: 'marco.r@example.com', country: 'Italy', trips: 3, joined: '2025-03-01', status: 'new', avatar: 'MR', totalSpend: 820 },
+  { id: '6', name: 'Elena Rostova', email: 'elena.r@example.com', country: 'Germany', trips: 0, joined: '2025-03-05', status: 'suspended', avatar: 'ER', totalSpend: 0 },
+  { id: '7', name: 'David Kim', email: 'david.k@example.com', country: 'South Korea', trips: 9, joined: '2024-12-12', status: 'active', avatar: 'DK', totalSpend: 3100 },
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  KPI Card
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,7 +210,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [chartData, setChartData]   = useState(MONTHLY_GROWTH);
   const [popularCities, setCities]  = useState(POPULAR_DESTINATIONS);
   const [popularActs, setPopActs]   = useState(POPULAR_ACTIVITIES);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [_dataLoaded, setDataLoaded] = useState(false);
 
   // Fetch all live admin data on mount
   useEffect(() => {

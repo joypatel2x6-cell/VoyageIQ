@@ -3,11 +3,11 @@ import { useApp } from '../context/AppContext';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
-  User, Mail, Phone, MapPin, Globe, Lock, Bell, Shield,
-  Trash2, Camera, Check, ChevronDown, ChevronRight,
-  Eye, EyeOff, Languages, Bookmark, Sparkles, Award,
-  Compass, Flame, Plane, Heart, Calendar, LogOut, Save, X,
-  CheckCircle2, AlertTriangle, ShieldCheck, Zap
+  User, Mail, MapPin, Lock,
+  Camera, Check, ChevronDown,
+  Eye, EyeOff, Bookmark, Sparkles, Award,
+  Compass, Heart, Save, X,
+  CheckCircle2, ShieldCheck
 } from 'lucide-react';
 
 // ── Types & Mock Data ──────────────────────────────────────────────────────────
@@ -70,16 +70,7 @@ export const Profile: React.FC = () => {
   const [showConf, setShowConf]   = useState(false);
   const [pwErrors, setPwErrors]   = useState<Record<string, string>>({});
 
-  // Notifications State
-  const [notifEmail, setNotifEmail]     = useState(true);
-  const [notifPush, setNotifPush]       = useState(true);
-  const [notifTripReminders, setRemind] = useState(true);
-  const [notifCommunity, setComm]       = useState(true);
-  const [notifDeals, setDeals]          = useState(false);
-
-  // Privacy State
-  const [profilePublic, setPublic] = useState(true);
-  const [showTrips, setShowTrips]  = useState(true);
+  // Deleted unused notification state variables to resolve TypeScript warnings
 
   // Delete Dialog
   const [showDelete, setShowDelete] = useState(false);
@@ -321,7 +312,9 @@ export const Profile: React.FC = () => {
                   <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
                     {firstName} {lastName}
                   </h1>
-                  <ShieldCheck size={22} color="#10b981" title="Verified Account" />
+                  <span title="Verified Account" style={{ display: 'inline-flex' }}>
+                    <ShieldCheck size={22} color="#10b981" />
+                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Mail size={13} /> {email}</span>

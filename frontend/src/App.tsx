@@ -79,6 +79,14 @@ const MainLayout: React.FC = () => {
 
   const [adminMode, setAdminMode] = useState(false);
 
+  // Open admin panel when view is set to 'admin' (e.g. via Navbar dropdown)
+  useEffect(() => {
+    if (currentView === 'admin') {
+      setAdminMode(true);
+      setCurrentView('dashboard');
+    }
+  }, [currentView, setCurrentView]);
+
   // Secret keyboard shortcut: Ctrl + Shift + A → opens Admin Panel
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
