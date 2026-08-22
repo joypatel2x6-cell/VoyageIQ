@@ -22,13 +22,40 @@ import { AdminDashboard } from './views/AdminDashboard';
 import { CostCalculator } from './views/CostCalculator';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Admin Gate — completely separate from the main app auth
+// ── Admin Gate — completely separate from the main app auth
 // ─────────────────────────────────────────────────────────────────────────────
 const AdminGate: React.FC<{ onExit: () => void }> = ({ onExit }) => {
-  const [adminAuthed, setAdminAuthed] = useState(false);
+  const { isAdmin, loginUserDirectly } = useApp();
+  const [adminAuthed, setAdminAuthed] = useState(isAdmin);
+
+  useEffect(() => {
+    setAdminAuthed(isAdmin);
+  }, [isAdmin]);
 
   if (!adminAuthed) {
-    return <AdminLogin onSuccess={() => setAdminAuthed(true)} onBack={onExit} />;
+    return (
+      <AdminLogin
+        onSuccess={() => {
+          loginUserDirectly('admin_local_token_' + Date.now(), {
+            id: 'admin-local-001',
+            firstName: 'Admin',
+            lastName: 'VoyageIQ',
+            email: 'admin@voyageiq.com',
+            phone: '',
+            city: '',
+            country: '',
+            avatarUrl: null,
+            preferences: [],
+            travelStyle: 'Balanced',
+            language: 'English',
+            joinedAt: '2025-01-01',
+            role: 'ADMIN'
+          });
+          setAdminAuthed(true);
+        }}
+        onBack={onExit}
+      />
+    );
   }
   return <AdminDashboard onLogout={onExit} />;
 };

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Shield, Eye, EyeOff, Lock, Mail, AlertTriangle, Compass } from 'lucide-react';
 
 const ADMIN_EMAIL    = 'admin@voyageiq.com';
-const ADMIN_PASSWORD = 'admin@123';
 
 interface AdminLoginProps {
   onSuccess: () => void;
@@ -26,7 +25,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onBack }) => 
 
     setLoading(true);
     setTimeout(() => {
-      if (email.trim() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      const isCorrectEmail = email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      const isCorrectPassword = password === 'admin@123' || password === 'Admin@123';
+
+      if (isCorrectEmail && isCorrectPassword) {
         onSuccess();
       } else {
         const newAttempts = attempts + 1;
