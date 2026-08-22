@@ -46,9 +46,9 @@ export const PlanTrip: React.FC = () => {
   const [tripDesc, setTripDesc] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [budgetLimit, setBudgetLimit] = useState(2000);
+  const [budgetLimit, setBudgetLimit] = useState(150000);
   const [travelersCount, setTravelersCount] = useState(1);
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('INR');
   const [travelStyle, setTravelStyle] = useState<'Budget' | 'Balanced' | 'Luxury'>('Balanced');
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=600');
   const [initialDestination, setInitialDestination] = useState('');
@@ -81,7 +81,7 @@ export const PlanTrip: React.FC = () => {
       setEndDate(activeTrip.endDate);
       setBudgetLimit(activeTrip.budgetLimit);
       setTravelersCount(activeTrip.travelersCount || 1);
-      setCurrency(activeTrip.currency || 'USD');
+      setCurrency(activeTrip.currency || 'INR');
       setTravelStyle(activeTrip.travelStyle || 'Balanced');
       setCoverImage(activeTrip.coverImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=600');
       setInitialDestination(activeTrip.destinations[0]?.name || '');
@@ -105,9 +105,9 @@ export const PlanTrip: React.FC = () => {
       setTripDesc('');
       setStartDate('');
       setEndDate('');
-      setBudgetLimit(2000);
+      setBudgetLimit(150000);
       setTravelersCount(1);
-      setCurrency('USD');
+      setCurrency('INR');
       setTravelStyle('Balanced');
       setCoverImage('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=600');
       setInitialDestination('');
@@ -692,7 +692,7 @@ export const PlanTrip: React.FC = () => {
                     onChange={(e) => setBudgetLimit(Number(e.target.value))}
                     error={formErrors.budgetLimit}
                     required
-                    leftIcon={<DollarSign size={15} />}
+                    leftIcon={<span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--color-primary)' }}>{currencySymbols[currency] || '₹'}</span>}
                   />
                   <div style={{ marginTop: '-4px', textAlign: 'right' }}>
                     <button
@@ -725,13 +725,13 @@ export const PlanTrip: React.FC = () => {
                       height: '42px',
                     }}
                   >
+                    <option value="INR">INR (₹)</option>
                     <option value="USD">USD ($)</option>
                     <option value="EUR">EUR (€)</option>
                     <option value="GBP">GBP (£)</option>
                     <option value="JPY">JPY (¥)</option>
                     <option value="AUD">AUD (A$)</option>
                     <option value="CAD">CAD (C$)</option>
-                    <option value="INR">INR (₹)</option>
                   </select>
                 </div>
                 
