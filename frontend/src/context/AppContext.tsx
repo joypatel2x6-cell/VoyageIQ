@@ -5,7 +5,7 @@ import { mockTrips, mockCommunityPosts, mockInsights } from '../data/mockData';
 export type ViewType =
   | 'dashboard' | 'my-trips' | 'plan-trip' | 'explore' | 'community'
   | 'calendar'  | 'trip-summary' | 'things-to-do' | 'profile' | 'shared-trip'
-  | 'insights';
+  | 'insights'  | 'cost-calculator';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Types

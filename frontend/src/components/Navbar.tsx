@@ -84,7 +84,8 @@ export const Navbar: React.FC = () => {
     { view: 'plan-trip', label: 'Plan Trip' },
     { view: 'explore', label: 'Explore' },
     { view: 'community', label: 'Community' },
-    { view: 'calendar', label: 'Calendar' }
+    { view: 'calendar', label: 'Calendar' },
+    { view: 'cost-calculator', label: 'Cost Calculator' }
   ];
 
   return (

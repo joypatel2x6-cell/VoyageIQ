@@ -8,7 +8,7 @@ import { DatePicker } from '../components/ui/DatePicker';
 import { TimelineItem } from '../components/TimelineItem';
 import { BudgetCard } from '../components/BudgetCard';
 import { BudgetProgress } from '../components/BudgetProgress';
-import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, PieChart, AlertTriangle, Users, Sparkles, Compass, Loader2 } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, PieChart, AlertTriangle, Users, Sparkles, Compass, Loader2, Calculator } from 'lucide-react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { SmartInsightCard } from '../components/SmartInsightCard';
 import { api } from '../services/api';
@@ -683,16 +683,27 @@ export const PlanTrip: React.FC = () => {
                   required
                   leftIcon={<Users size={15} />}
                 />
-                <Input
-                  label={`Total Budget (${currency})`}
-                  type="number"
-                  min="0"
-                  value={budgetLimit}
-                  onChange={(e) => setBudgetLimit(Number(e.target.value))}
-                  error={formErrors.budgetLimit}
-                  required
-                  leftIcon={<DollarSign size={15} />}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
+                  <Input
+                    label={`Total Budget (${currency})`}
+                    type="number"
+                    min="0"
+                    value={budgetLimit}
+                    onChange={(e) => setBudgetLimit(Number(e.target.value))}
+                    error={formErrors.budgetLimit}
+                    required
+                    leftIcon={<DollarSign size={15} />}
+                  />
+                  <div style={{ marginTop: '-4px', textAlign: 'right' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentView('cost-calculator')}
+                      style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--color-primary)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <Calculator size={11} /> Open Cost Calculator
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Row 4: Currency & Initial Destination */}
@@ -1616,9 +1627,12 @@ export const PlanTrip: React.FC = () => {
           )}
 
           {/* Navigation Controls */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color-light)', paddingTop: '1.5rem', marginTop: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color-light)', paddingTop: '1.5rem', marginTop: '2rem', gap: '10px' }}>
             <Button variant="outline" onClick={() => setStep(2)} leftIcon={<ArrowLeft size={16} />}>
               Back
+            </Button>
+            <Button variant="outline" onClick={() => setCurrentView('cost-calculator')} leftIcon={<Calculator size={16} />}>
+              Open Cost Calculator
             </Button>
             <Button
               variant="success"

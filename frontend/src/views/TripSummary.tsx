@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Edit3, Calendar, MapPin, Share2, Download, Sparkles, AlertTriangle, Coins, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Edit3, Calendar, MapPin, Share2, Download, Sparkles, AlertTriangle, Coins, RefreshCw, Calculator } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { TimelineItem } from '../components/TimelineItem';
 import { Badge } from '../components/ui/Badge';
@@ -455,9 +455,17 @@ export const TripSummary: React.FC = () => {
               }}
             >
               <div>
-                <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
-                  Trip Budget Progress
-                </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                    Trip Budget Progress
+                  </span>
+                  <button
+                    onClick={() => setCurrentView('cost-calculator')}
+                    style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--color-primary)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Calculator size={12} /> Cost Calculator
+                  </button>
+                </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '6px' }}>
                   <span style={{ fontSize: '2rem', fontWeight: 800 }}>
                     {symbol}{totalCost.toLocaleString()}

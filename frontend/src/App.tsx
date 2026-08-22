@@ -19,6 +19,7 @@ import { SharedTrip } from './views/SharedTrip';
 import { Insights } from './views/Insights';
 import { AdminLogin } from './views/AdminLogin';
 import { AdminDashboard } from './views/AdminDashboard';
+import { CostCalculator } from './views/CostCalculator';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Admin Gate — completely separate from the main app auth
@@ -137,6 +138,8 @@ const MainLayout: React.FC = () => {
         setCurrentView('trip-summary');
       } else if (path === '/activities') {
         setCurrentView('things-to-do');
+      } else if (path === '/cost-calculator') {
+        setCurrentView('cost-calculator');
       } else if (path === '/dashboard' || path === '/') {
         setCurrentView('dashboard');
       }
@@ -170,6 +173,8 @@ const MainLayout: React.FC = () => {
       path = '/community';
     } else if (currentView === 'profile') {
       path = '/profile';
+    } else if (currentView === 'cost-calculator') {
+      path = '/cost-calculator';
     } else if (!isAuthenticated) {
       if (window.location.pathname.startsWith('/auth/google/callback')) {
         return; // wait for callback parser to run first
@@ -223,6 +228,7 @@ const MainLayout: React.FC = () => {
       case 'things-to-do': return <ThingsToDo />;
       case 'profile':      return <Profile />;
       case 'insights':     return <Insights />;
+      case 'cost-calculator': return <CostCalculator />;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       case ('shared-trip' as any): return <SharedTrip />;
       case 'dashboard':

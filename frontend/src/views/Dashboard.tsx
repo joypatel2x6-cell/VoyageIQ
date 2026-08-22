@@ -5,7 +5,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { 
   Calendar, MapPin, 
-  DollarSign, Globe, Sparkles, ChevronLeft, ChevronRight, Users, Award, Plus 
+  DollarSign, Globe, Sparkles, ChevronLeft, ChevronRight, Users, Award, Plus, Calculator 
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -127,6 +127,14 @@ export const Dashboard: React.FC = () => {
             style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.05)' }}
           >
             Explore Destinations
+          </Button>
+          <Button
+            variant="outline"
+            leftIcon={<Calculator size={16} />}
+            onClick={() => setCurrentView('cost-calculator')}
+            style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.05)' }}
+          >
+            Cost Calculator
           </Button>
         </div>
       </div>
