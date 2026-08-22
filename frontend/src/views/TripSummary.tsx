@@ -4,6 +4,7 @@ import { ArrowLeft, Edit3, Calendar, MapPin, Share2, Download, Sparkles, AlertTr
 import { Button } from '../components/ui/Button';
 import { TimelineItem } from '../components/TimelineItem';
 import { Badge } from '../components/ui/Badge';
+import { SmartInsightCard } from '../components/SmartInsightCard';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell, PieChart, Pie, Legend } from 'recharts';
 
 const currencySymbols: Record<string, string> = {
@@ -359,6 +360,13 @@ export const TripSummary: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── VoyageIQ Smart Insight ─────────────────────────────────────────── */}
+      <SmartInsightCard
+        trip={activeTrip}
+        maxVisible={1}
+        onAction={() => showToast('Recommendation noted! Review your itinerary to apply changes.', 'info')}
+      />
 
       {/* Tab Selectors */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', gap: '20px' }}>

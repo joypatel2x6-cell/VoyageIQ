@@ -10,6 +10,7 @@ import { BudgetCard } from '../components/BudgetCard';
 import { BudgetProgress } from '../components/BudgetProgress';
 import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, PieChart, AlertTriangle, Users, Sparkles, Compass } from 'lucide-react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { SmartInsightCard } from '../components/SmartInsightCard';
 
 const currencySymbols: Record<string, string> = {
   USD: '$',
@@ -1318,6 +1319,13 @@ export const PlanTrip: React.FC = () => {
             totalSpent={totalSpent} 
             budgetLimit={activeTrip.budgetLimit} 
             currencySymbol={currencySymbols[activeTrip.currency || 'USD'] || '$'}
+          />
+
+          {/* ── Smart Insight Card ──────────────────────────────────────── */}
+          <SmartInsightCard
+            trip={activeTrip}
+            maxVisible={1}
+            onAction={() => showToast('Insight noted! Adjust your activities to apply this recommendation.', 'info')}
           />
 
           {/* Warnings Panel */}
