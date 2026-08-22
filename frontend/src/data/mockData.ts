@@ -437,6 +437,308 @@ export const mockCommunityPosts: CommunityPost[] = [
         }
       ]
     }
+  },
+  {
+    id: 'post-3',
+    authorName: 'Priya Nair',
+    authorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+    likesCount: 519,
+    commentsCount: 63,
+    tags: ['Luxury', 'Coastal', 'Greece'],
+    trip: {
+      id: 'trip-c3',
+      name: 'Greek Island Hopping — Santorini to Mykonos',
+      description: 'A sun-drenched odyssey through the dazzling Cyclades: whitewashed villages, caldera sunsets, crystal-clear waters, and world-class seafood at every port.',
+      startDate: '2026-08-01',
+      endDate: '2026-08-10',
+      budgetLimit: 4500,
+      isShared: true,
+      travelStyle: 'Luxury',
+      currency: 'EUR',
+      travelersCount: 2,
+      likesCount: 519,
+      commentsCount: 63,
+      collaborators: [],
+      destinations: [
+        {
+          id: 'city-c3-1',
+          name: 'Santorini',
+          image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-08-01',
+          departureDate: '2026-08-05',
+          activities: [
+            {
+              id: 'act-c3-1',
+              title: 'Oia Sunset Cliffside Dinner',
+              date: '2026-08-02',
+              time: '19:30',
+              cost: 220,
+              category: 'food',
+              location: 'Oia, Santorini',
+              notes: 'Reserve 3 weeks in advance. Ask for a caldera-facing table.'
+            },
+            {
+              id: 'act-c3-2',
+              title: 'Private Catamaran Cruise — Caldera & Hot Springs',
+              date: '2026-08-03',
+              time: '10:00',
+              cost: 380,
+              category: 'activity',
+              location: 'Ammoudi Bay',
+              notes: 'Includes lunch, snorkeling, and sunset return.'
+            }
+          ]
+        },
+        {
+          id: 'city-c3-2',
+          name: 'Mykonos',
+          image: 'https://images.unsplash.com/photo-1601581875309-fafbf2d3ed3a?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-08-05',
+          departureDate: '2026-08-10',
+          activities: [
+            {
+              id: 'act-c3-3',
+              title: 'Little Venice Sunset Cocktail Walk',
+              date: '2026-08-06',
+              time: '18:00',
+              cost: 80,
+              category: 'food',
+              location: 'Little Venice, Mykonos Town',
+              notes: 'Bar-hop along the waterfront — start at Caprice.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: 'post-4',
+    authorName: 'Kenji Watanabe',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
+    likesCount: 387,
+    commentsCount: 41,
+    tags: ['Budget', 'Culture', 'Bali'],
+    trip: {
+      id: 'trip-c4',
+      name: 'Bali Spiritual & Wellness Retreat',
+      description: '9 days of temple ceremonies, jungle treks, sunrise yoga, and traditional Balinese healing rituals across Ubud, Seminyak, and the cliffside Uluwatu.',
+      startDate: '2026-11-05',
+      endDate: '2026-11-14',
+      budgetLimit: 1800,
+      isShared: true,
+      travelStyle: 'Balanced',
+      currency: 'USD',
+      travelersCount: 1,
+      likesCount: 387,
+      commentsCount: 41,
+      collaborators: [],
+      destinations: [
+        {
+          id: 'city-c4-1',
+          name: 'Ubud',
+          image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-11-05',
+          departureDate: '2026-11-09',
+          activities: [
+            {
+              id: 'act-c4-1',
+              title: 'Sunrise Yoga at Campuhan Ridge Walk',
+              date: '2026-11-06',
+              time: '06:00',
+              cost: 15,
+              category: 'activity',
+              location: 'Campuhan Ridge, Ubud',
+              notes: 'Walk the ridge before the crowds arrive.'
+            },
+            {
+              id: 'act-c4-2',
+              title: 'Traditional Balinese Cooking Class',
+              date: '2026-11-07',
+              time: '09:00',
+              cost: 35,
+              category: 'food',
+              location: 'Payuk Bali Kitchen, Ubud',
+              notes: 'Includes morning market visit and 8-dish menu.'
+            }
+          ]
+        },
+        {
+          id: 'city-c4-2',
+          name: 'Uluwatu',
+          image: 'https://images.unsplash.com/photo-1555400038-63f5ba517a47?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-11-09',
+          departureDate: '2026-11-14',
+          activities: [
+            {
+              id: 'act-c4-3',
+              title: 'Kecak Fire Dance at Uluwatu Temple',
+              date: '2026-11-10',
+              time: '18:00',
+              cost: 12,
+              category: 'culture',
+              location: 'Pura Luhur Uluwatu, Pecatu',
+              notes: 'Arrive 30 mins early for a cliff-edge seat above the Indian Ocean.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: 'post-5',
+    authorName: 'Sofia Bergmann',
+    authorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80',
+    likesCount: 612,
+    commentsCount: 88,
+    tags: ['Nature', 'Adventure', 'Norway'],
+    trip: {
+      id: 'trip-c5',
+      name: 'Norwegian Fjords & Arctic Wilderness',
+      description: 'Cruise through sheer-walled fjords, kayak across mirrored lakes, hike the legendary Trolltunga, and sleep under a blanket of aurora borealis.',
+      startDate: '2026-09-15',
+      endDate: '2026-09-24',
+      budgetLimit: 5500,
+      isShared: true,
+      travelStyle: 'Luxury',
+      currency: 'EUR',
+      travelersCount: 2,
+      likesCount: 612,
+      commentsCount: 88,
+      collaborators: [],
+      destinations: [
+        {
+          id: 'city-c5-1',
+          name: 'Bergen',
+          image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-09-15',
+          departureDate: '2026-09-18',
+          activities: [
+            {
+              id: 'act-c5-1',
+              title: 'Bryggen Wharf UNESCO Heritage Walk',
+              date: '2026-09-15',
+              time: '11:00',
+              cost: 0,
+              category: 'culture',
+              location: 'Bryggen, Bergen',
+              notes: 'Free self-guided tour of the historic Hanseatic wharf.'
+            },
+            {
+              id: 'act-c5-2',
+              title: 'Flåm Railway Scenic Train Journey',
+              date: '2026-09-17',
+              time: '08:30',
+              cost: 90,
+              category: 'transport',
+              location: 'Myrdal Station → Flåm',
+              notes: 'One of the world\'s most dramatic railway routes.'
+            }
+          ]
+        },
+        {
+          id: 'city-c5-2',
+          name: 'Trolltunga & Hardangerfjord',
+          image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-09-18',
+          departureDate: '2026-09-24',
+          activities: [
+            {
+              id: 'act-c5-3',
+              title: 'Trolltunga Epic Day Hike (22km)',
+              date: '2026-09-19',
+              time: '06:00',
+              cost: 0,
+              category: 'adventure',
+              location: 'Skjeggedal Trailhead, Odda',
+              notes: '10-12 hour hike. Bring layers, poles, and 3+ liters of water.'
+            },
+            {
+              id: 'act-c5-4',
+              title: 'Northern Lights Photography Boat',
+              date: '2026-09-22',
+              time: '21:00',
+              cost: 140,
+              category: 'activity',
+              location: 'Hardangerfjord Night Tours',
+              notes: 'Clear night forecast — best aurora window of the trip.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    id: 'post-6',
+    authorName: 'Tariq Al-Hassan',
+    authorAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80',
+    likesCount: 298,
+    commentsCount: 34,
+    tags: ['Desert', 'Culture', 'Morocco'],
+    trip: {
+      id: 'trip-c6',
+      name: 'Moroccan Desert Safari & Imperial Cities',
+      description: 'Traverse labyrinthine medinas, sleep under stars in Saharan dunes, sip mint tea in ancient riads, and witness the kaleidoscopic souks of Marrakech and Fès.',
+      startDate: '2026-12-01',
+      endDate: '2026-12-10',
+      budgetLimit: 2200,
+      isShared: true,
+      travelStyle: 'Balanced',
+      currency: 'USD',
+      travelersCount: 2,
+      likesCount: 298,
+      commentsCount: 34,
+      collaborators: [],
+      destinations: [
+        {
+          id: 'city-c6-1',
+          name: 'Marrakech',
+          image: 'https://images.unsplash.com/photo-1553154996-56a535de4d88?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-12-01',
+          departureDate: '2026-12-04',
+          activities: [
+            {
+              id: 'act-c6-1',
+              title: 'Djemaa el-Fna Night Food Market',
+              date: '2026-12-01',
+              time: '20:00',
+              cost: 25,
+              category: 'food',
+              location: 'Jemaa el-Fnaa Square, Marrakech',
+              notes: 'Try the snail soup, freshly squeezed orange juice, and lamb tagine.'
+            },
+            {
+              id: 'act-c6-2',
+              title: 'Majorelle Garden & YSL Museum',
+              date: '2026-12-02',
+              time: '10:00',
+              cost: 18,
+              category: 'culture',
+              location: 'Jardin Majorelle, Guéliz District',
+              notes: 'Arrive at opening time to beat the heat and the tour groups.'
+            }
+          ]
+        },
+        {
+          id: 'city-c6-2',
+          name: 'Sahara Desert (Merzouga)',
+          image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=800&auto=format&fit=crop',
+          arrivalDate: '2026-12-04',
+          departureDate: '2026-12-10',
+          activities: [
+            {
+              id: 'act-c6-3',
+              title: 'Camel Trek to Erg Chebbi Dunes Camp',
+              date: '2026-12-05',
+              time: '16:30',
+              cost: 95,
+              category: 'adventure',
+              location: 'Merzouga, Erg Chebbi',
+              notes: 'Overnight luxury camp included. Sunrise trek back at 6am.'
+            }
+          ]
+        }
+      ]
+    }
   }
 ];
 
