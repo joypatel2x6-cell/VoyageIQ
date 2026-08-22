@@ -1,7 +1,7 @@
 const config = require('../config/env');
 
 /**
- * Generate a complete trip itinerary using OpenRouter API
+ * Generate a complete trip itinerary using Google Gemini API or OpenRouter API
  */
 async function generateItinerary({
   destination,
@@ -14,10 +14,11 @@ async function generateItinerary({
   tripName = '',
   notes = '',
 }) {
-  const apiKey = process.env.OPENROUTER_API_KEY || config.openrouterApiKey;
+  const geminiKey = process.env.GEMINI_API_KEY || config.geminiApiKey;
+  const openrouterKey = process.env.OPENROUTER_API_KEY || config.openrouterApiKey;
 
-  if (!apiKey) {
-    throw new Error('OpenRouter API Key is missing. Please add OPENROUTER_API_KEY to your backend/.env file.');
+  if (!geminiKey && !openrouterKey) {
+    throw new Error('Gemini API Key is missing. Please add GEMINI_API_KEY="" to your backend/.env file.');
   }
 
   // Calculate days
@@ -70,72 +71,132 @@ Make sure:
 2. Keep costs realistic so total cost fits inside ${currency} ${budgetLimit}.
 3. Generate 2 to 4 activities per day across the dates ${startDate} to ${endDate}.`;
 
-  const candidateModels = [
-    'google/gemini-2.5-flash',
-    'openai/gpt-4o-mini',
-    'meta-llama/llama-3.3-70b-instruct',
-    'anthropic/claude-3.5-haiku',
-  ];
-
   let lastError = null;
 
-  for (const model of candidateModels) {
-    try {
-      console.log(`[AI Service] Calling OpenRouter model: ${model}...`);
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'http://localhost:5000',
-          'X-Title': 'VoyageIQ Travel Planner',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a professional travel planner API that strictly returns valid JSON objects.',
+  // 1. Try Direct Google Gemini API first if GEMINI_API_KEY is available
+  if (geminiKey) {
+    const geminiModels = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+
+    for (const model of geminiModels) {
+      try {
+        console.log(`[AI Service] Calling Google Gemini API (model: ${model})...`);
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
             },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-        }),
-      });
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: prompt }],
+                },
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.7,
+              },
+            }),
+          }
+        );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.warn(`[OpenRouter] Model ${model} failed (${response.status}):`, errorText);
-        lastError = new Error(`OpenRouter API error (${response.status}): ${errorText}`);
-        continue;
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`[Gemini API] Model ${model} failed (${response.status}):`, errorText);
+          lastError = new Error(`Google Gemini API error (${response.status}): ${errorText}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!content) {
+          lastError = new Error('Empty response received from Gemini API.');
+          continue;
+        }
+
+        const cleaned = content
+          .replace(/^\s*```json/gi, '')
+          .replace(/^\s*```/gi, '')
+          .replace(/```\s*$/gi, '')
+          .trim();
+
+        const parsed = JSON.parse(cleaned);
+        return parsed;
+      } catch (err) {
+        console.warn(`[Gemini API] Error trying model ${model}:`, err.message);
+        lastError = err;
       }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-
-      if (!content) {
-        lastError = new Error('Empty response received from OpenRouter AI model.');
-        continue;
-      }
-
-      const cleaned = content
-        .replace(/^\s*```json/gi, '')
-        .replace(/^\s*```/gi, '')
-        .replace(/```\s*$/gi, '')
-        .trim();
-
-      const parsed = JSON.parse(cleaned);
-      return parsed;
-    } catch (err) {
-      console.warn(`[OpenRouter] Error trying model ${model}:`, err.message);
-      lastError = err;
     }
   }
 
-  throw lastError || new Error('Failed to generate itinerary with OpenRouter AI.');
+  // 2. Fallback to OpenRouter if OPENROUTER_API_KEY is available
+  if (openrouterKey) {
+    const candidateModels = [
+      'google/gemini-2.5-flash',
+      'openai/gpt-4o-mini',
+      'meta-llama/llama-3.3-70b-instruct',
+    ];
+
+    for (const model of candidateModels) {
+      try {
+        console.log(`[AI Service] Calling OpenRouter model: ${model}...`);
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openrouterKey}`,
+            'HTTP-Referer': 'http://localhost:5000',
+            'X-Title': 'VoyageIQ Travel Planner',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a professional travel planner API that strictly returns valid JSON objects.',
+              },
+              {
+                role: 'user',
+                content: prompt,
+              },
+            ],
+            temperature: 0.7,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`[OpenRouter] Model ${model} failed (${response.status}):`, errorText);
+          lastError = new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+          lastError = new Error('Empty response received from OpenRouter API.');
+          continue;
+        }
+
+        const cleaned = content
+          .replace(/^\s*```json/gi, '')
+          .replace(/^\s*```/gi, '')
+          .replace(/```\s*$/gi, '')
+          .trim();
+
+        const parsed = JSON.parse(cleaned);
+        return parsed;
+      } catch (err) {
+        console.warn(`[OpenRouter] Error trying model ${model}:`, err.message);
+        lastError = err;
+      }
+    }
+  }
+
+  throw lastError || new Error('Failed to generate itinerary with AI. Please verify your GEMINI_API_KEY in backend/.env.');
 }
 
 module.exports = {
