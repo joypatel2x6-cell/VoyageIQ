@@ -159,10 +159,10 @@ export const Sidebar: React.FC = () => {
         />
         <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <span style={{ fontSize: '0.875rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            Emma Watson
+            Ayush
           </span>
           <span style={{ fontSize: '0.725rem', opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            emma@voyageiq.com
+            ayush@voyageiq.com
           </span>
         </div>
       </div>

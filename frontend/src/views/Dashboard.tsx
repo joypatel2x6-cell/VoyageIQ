@@ -1,27 +1,32 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { mockDestinations } from '../data/mockData';
-import { DestinationCard } from '../components/DestinationCard';
-import { BudgetProgress } from '../components/BudgetProgress';
-import { Calendar, Compass, AlertCircle, ArrowRight } from 'lucide-react';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { 
+  Calendar, MapPin, 
+  DollarSign, Globe, Sparkles, ChevronLeft, ChevronRight, Users, Award, Plus 
+} from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { trips, insights, setCurrentView, setActiveTripId, addTrip } = useApp();
+  const { trips, setCurrentView, setActiveTripId, addTrip } = useApp();
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   // Find the next upcoming trip (closest start date that is in the future)
   const nextTrip = [...trips]
     .filter((t) => new Date(t.startDate) >= new Date())
     .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
 
-  // Quick Stats
+  // SECTION 1 Stats Computations
+  const upcomingCount = trips.filter(t => new Date(t.startDate) >= new Date()).length;
   const totalTrips = trips.length;
-  const totalSpent = trips.reduce(
-    (sum, t) =>
-      sum +
-      t.destinations.reduce((s, dest) => s + dest.activities.reduce((aSum, act) => aSum + act.cost, 0), 0),
-    0
-  );
+  
+  // Distinct cities count
+  const uniqueCities = new Set(trips.flatMap(t => t.destinations.map(d => d.name)));
+  const citiesCount = uniqueCities.size;
+
+  // Sum of budget limits
+  const totalBudgetLimit = trips.reduce((sum, t) => sum + t.budgetLimit, 0);
 
   // Compute countdown in days
   const getDaysCountdown = (dateStr: string) => {
@@ -34,7 +39,6 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleQuickPlan = (destinationName: string) => {
-    // Scaffold a base trip and transition to Plan Trip
     const today = new Date();
     const defaultStart = new Date();
     defaultStart.setDate(today.getDate() + 30);
@@ -59,253 +63,704 @@ export const Dashboard: React.FC = () => {
     setCurrentView('plan-trip');
   };
 
+  // Carousel scroll helpers
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    if (carouselRef.current) {
+      const scrollOffset = direction === 'left' ? -340 : 340;
+      carouselRef.current.scrollBy({ left: scrollOffset, behavior: 'smooth' });
+    }
+  };
+
+  // SVG Circle Stroke calculation for 82% gauge
+  const radius = 32;
+  const circumference = 2 * Math.PI * radius; // ~201
+  const strokeDashoffset = circumference - (82 / 100) * circumference;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Welcome Banner */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', paddingBottom: '3rem' }}>
+      
+      {/* ==================== HERO BANNER SECTION ==================== */}
       <div
         className="glass-panel"
         style={{
-          padding: '2rem',
-          borderRadius: 'var(--radius-xl)',
-          background: 'linear-gradient(135deg, var(--bg-dark-accent) 0%, var(--bg-dark-surface) 100%)',
-          color: 'var(--text-on-dark)',
+          borderRadius: 'var(--radius-2xl)',
+          backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.85)), url("https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1600")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          color: '#ffffff',
+          padding: '3rem 2.5rem',
           position: 'relative',
-          overflow: 'hidden',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1.5rem',
+          flexDirection: 'column',
+          gap: '0.75rem',
+          boxShadow: 'var(--shadow-xl)',
+          overflow: 'hidden',
         }}
       >
-        {/* Abstract background graphics */}
-        <div style={{ position: 'absolute', right: '-10%', bottom: '-30%', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)', opacity: 0.25, pointerEvents: 'none' }} />
-        
-        <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.025em' }}>
-            Welcome back, Emma!
-          </h1>
-          <p style={{ opacity: 0.8, fontSize: '0.95rem', maxWidth: '480px' }}>
-            "Plan Smarter. Travel Further." Your customized hubs and travel metrics are all up to date.
-          </p>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={<Compass size={16} />}
-              onClick={() => setCurrentView('explore')}
-            >
-              Explore Destinations
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentView('my-trips')}
-              style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}
-            >
-              View My Trips
-            </Button>
-          </div>
+        <div style={{ display: 'inline-flex', alignSelf: 'flex-start', padding: '4px 12px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(2, 132, 199, 0.35)', border: '1px solid rgba(2, 132, 199, 0.5)', fontSize: '0.75rem', fontWeight: 700, gap: '6px', alignItems: 'center' }}>
+          <Sparkles size={12} color="var(--color-secondary)" /> Premium Intelligence
         </div>
+        <span style={{ fontSize: '1rem', fontWeight: 600, opacity: 0.9 }}>
+          Good morning, Ayush 👋
+        </span>
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: '1.15' }}>
+          Where will you go next?
+        </h1>
+        <p style={{ opacity: 0.85, fontSize: '0.975rem', maxWidth: '580px', lineHeight: '1.5' }}>
+          Plan smarter journeys, discover unforgettable places, and keep every detail in one place.
+        </p>
+        
+        <div style={{ display: 'flex', gap: '12px', marginTop: '0.75rem' }}>
+          <Button
+            variant="primary"
+            leftIcon={<Plus size={16} />}
+            onClick={() => {
+              setActiveTripId(null);
+              setCurrentView('plan-trip');
+            }}
+          >
+            Plan a New Trip
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView('explore')}
+            style={{ color: '#ffffff', borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.05)' }}
+          >
+            Explore Destinations
+          </Button>
+        </div>
+      </div>
 
-        <div style={{ zIndex: 2, display: 'flex', gap: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-secondary)' }}>{totalTrips}</span>
-            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Trips Booked</span>
+      {/* ==================== SECTION 1: TRAVEL OVERVIEW ==================== */}
+      <div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+          Your Travel Overview
+        </h2>
+        
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '1.25rem'
+          }}
+          className="stats-row-grid"
+        >
+          <style>{`
+            @media (max-width: 1024px) {
+              .stats-row-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+              }
+            }
+            @media (max-width: 640px) {
+              .stats-row-grid {
+                grid-template-columns: 1fr !important;
+              }
+            }
+          `}</style>
+
+          {/* Stat A */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-color-light)',
+              padding: '1.25rem',
+              boxShadow: 'var(--shadow-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              transition: 'transform 0.2s',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+          >
+            <div style={{ padding: '10px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
+              <Calendar size={20} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Upcoming Trips</span>
+              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>{upcomingCount}</span>
+            </div>
           </div>
-          <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-success)' }}>
-              ${totalSpent.toLocaleString()}
-            </span>
-            <span style={{ fontSize: '0.75rem', opacity: 0.6 }}>Spent So Far</span>
+
+          {/* Stat B */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-color-light)',
+              padding: '1.25rem',
+              boxShadow: 'var(--shadow-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              transition: 'transform 0.2s',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+          >
+            <div style={{ padding: '10px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-primary-hover)' }}>
+              <Globe size={20} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Total Trips</span>
+              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>{totalTrips}</span>
+            </div>
+          </div>
+
+          {/* Stat C */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-color-light)',
+              padding: '1.25rem',
+              boxShadow: 'var(--shadow-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              transition: 'transform 0.2s',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+          >
+            <div style={{ padding: '10px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)' }}>
+              <MapPin size={20} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Cities Explored</span>
+              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>{citiesCount}</span>
+            </div>
+          </div>
+
+          {/* Stat D */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-color-light)',
+              padding: '1.25rem',
+              boxShadow: 'var(--shadow-sm)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              transition: 'transform 0.2s',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+          >
+            <div style={{ padding: '10px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--color-accent-warm-light)', color: 'var(--color-accent-warm)' }}>
+              <DollarSign size={20} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Planned Budgets</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                ${totalBudgetLimit.toLocaleString()}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }} className="dashboard-grid">
-        <style>{`
-          @media (min-width: 1024px) {
-            .dashboard-grid {
-              grid-template-columns: 2fr 1fr !important;
-            }
-          }
-        `}</style>
+      {/* ==================== SECTION 2: UPCOMING TRIP FEATURED CARD ==================== */}
+      <div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+          Upcoming Trip
+        </h2>
 
-        {/* Left Column: Spotlight & Recommendations */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Next Trip Spotlight */}
-          {nextTrip ? (
-            <div
-              className="glass-panel"
-              style={{
-                borderRadius: 'var(--radius-xl)',
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color-light)', backgroundColor: 'var(--bg-secondary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Calendar size={18} color="var(--color-primary)" />
-                  <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Upcoming Spotlight</span>
-                </div>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-warning)' }}>
-                  In {getDaysCountdown(nextTrip.startDate)} Days
-                </span>
-              </div>
+        {nextTrip ? (
+          (() => {
+            const spent = nextTrip.destinations.reduce(
+              (sum, dest) => sum + dest.activities.reduce((s, act) => s + act.cost, 0),
+              0
+            );
+            const percent = Math.min(Math.round((spent / nextTrip.budgetLimit) * 100), 100);
+            const isOver = spent > nextTrip.budgetLimit;
 
+            return (
               <div
+                className="glass-panel"
                 style={{
+                  borderRadius: 'var(--radius-xl)',
+                  backgroundColor: 'var(--bg-secondary)',
                   display: 'flex',
                   flexWrap: 'wrap',
-                  gap: '20px',
-                  padding: '1.5rem',
-                  backgroundColor: 'var(--bg-secondary)',
+                  overflow: 'hidden',
+                  boxShadow: 'var(--shadow-md)',
+                  border: '1px solid var(--border-color-light)',
                 }}
               >
-                <img
-                  src={nextTrip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800'}
-                  alt={nextTrip.name}
-                  style={{ width: '120px', height: '90px', borderRadius: 'var(--radius-md)', objectFit: 'cover' }}
-                />
-                <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{nextTrip.name}</h3>
-                  <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                    {nextTrip.description}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    <span>Starts: {nextTrip.startDate}</span>
-                    <span>•</span>
-                    <span>Destinations: {nextTrip.destinations.length}</span>
+                <style>{`
+                  .trip-visual {
+                    flex: 1;
+                    min-width: 300px;
+                    height: 280px;
+                    position: relative;
+                  }
+                  .trip-details {
+                    flex: 1.5;
+                    min-width: 320px;
+                    padding: 2rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.25rem;
+                  }
+                  @media (max-width: 640px) {
+                    .trip-visual { height: 180px !important; }
+                    .trip-details { padding: 1.25rem !important; }
+                  }
+                `}</style>
+
+                {/* Left side Visual image */}
+                <div className="trip-visual">
+                  <img
+                    src={nextTrip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800'}
+                    alt={nextTrip.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to right, rgba(0,0,0,0.1), rgba(0,0,0,0.45))' }} />
+                  
+                  {/* Days countdown overlay */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '16px',
+                      left: '16px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                      backdropFilter: 'blur(4px)',
+                      color: '#ffffff',
+                      padding: '4px 12px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Starts in {getDaysCountdown(nextTrip.startDate)} Days
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                {/* Right side details info */}
+                <div className="trip-details">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                      {nextTrip.name}
+                    </h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                      <Calendar size={14} color="var(--text-light)" />
+                      <span>{nextTrip.startDate} to {nextTrip.endDate}</span>
+                    </div>
+                  </div>
+
+                  {/* Cities stops sequence */}
+                  {nextTrip.destinations.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '0.725rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                        Route:
+                      </span>
+                      {nextTrip.destinations.map((c, idx) => (
+                        <React.Fragment key={c.id}>
+                          {idx > 0 && <span style={{ color: 'var(--text-light)', fontSize: '0.8rem' }}>→</span>}
+                          <Badge variant="neutral">{c.name}</Badge>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Budget analysis bar */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', fontWeight: 600 }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Budget Allocation</span>
+                      <span style={{ color: isOver ? 'var(--color-error)' : 'var(--color-success)' }}>
+                        ${spent.toLocaleString()} / ${nextTrip.budgetLimit.toLocaleString()} ({percent}%)
+                      </span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${percent}%`,
+                          height: '100%',
+                          backgroundColor: isOver ? 'var(--color-error)' : percent > 85 ? 'var(--color-warning)' : 'var(--color-success)',
+                          borderRadius: 'var(--radius-full)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer travelers & buttons */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color-light)', paddingTop: '1rem', marginTop: 'auto' }}>
+                    {/* Avatars */}
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      {nextTrip.collaborators.length > 0 ? (
+                        <div style={{ display: 'flex', marginRight: '6px' }}>
+                          {nextTrip.collaborators.slice(0, 3).map((col, idx) => (
+                            <img
+                              key={idx}
+                              src={col.avatar}
+                              alt={col.name}
+                              title={col.name}
+                              style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid var(--bg-secondary)', marginLeft: idx > 0 ? '-8px' : 0, objectFit: 'cover' }}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Users size={12} /> Personal Trip
+                        </span>
+                      )}
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setActiveTripId(nextTrip.id);
+                        setCurrentView('trip-summary');
+                      }}
+                    >
+                      View Trip
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()
+        ) : (
+          <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', borderRadius: 'var(--radius-xl)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+            <Calendar size={32} style={{ marginBottom: '8px' }} />
+            <p style={{ fontSize: '0.875rem' }}>No upcoming itineraries scheduled. Click plan a new trip to get started.</p>
+          </div>
+        )}
+      </div>
+
+      {/* ==================== SECTION 3: POPULAR DESTINATIONS (CAROUSEL) ==================== */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+              Popular Destinations
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+              Scaffold instant trips by selecting popular locations.
+            </p>
+          </div>
+
+          {/* Carousel Arrows */}
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button
+              onClick={() => scrollCarousel('left')}
+              style={{ padding: '6px', borderRadius: '50%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', cursor: 'pointer', transition: 'background-color 0.2s', display: 'flex' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => scrollCarousel('right')}
+              style={{ padding: '6px', borderRadius: '50%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', cursor: 'pointer', transition: 'background-color 0.2s', display: 'flex' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Carousel Container */}
+        <div
+          ref={carouselRef}
+          style={{
+            display: 'flex',
+            gap: '1.25rem',
+            overflowX: 'auto',
+            scrollSnapType: 'x mandatory',
+            paddingBottom: '0.5rem',
+            scrollbarWidth: 'none', // Firefox hidden
+          }}
+          className="carousel-container"
+        >
+          <style>{`
+            .carousel-container::-webkit-scrollbar {
+              display: none !important; /* Chrome/Safari hidden */
+            }
+            .carousel-card {
+              flex: 0 0 300px;
+              scroll-snap-align: start;
+              background-color: var(--bg-secondary);
+              border-radius: var(--radius-xl);
+              border: 1px solid var(--border-color-light);
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+              box-shadow: var(--shadow-sm);
+              transition: all 0.3s ease;
+            }
+            .carousel-card:hover {
+              transform: translateY(-4px);
+              box-shadow: var(--shadow-lg);
+            }
+          `}</style>
+
+          {mockDestinations.map((dest) => (
+            <div key={dest.id} className="carousel-card">
+              <div style={{ height: '150px', position: 'relative', overflow: 'hidden' }}>
+                <img src={dest.image} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                
+                {/* Rating */}
+                <div style={{ position: 'absolute', top: '12px', right: '12px', padding: '3px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', color: '#ffffff', fontSize: '0.725rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  ★ {dest.rating}
+                </div>
+              </div>
+
+              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                <div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    {dest.name.split(',')[0]}
+                  </h4>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    {dest.name.split(',')[1]?.trim() || 'Travel Spot'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 'auto', borderTop: '1px solid var(--border-color-light)', paddingTop: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.675rem', color: 'var(--text-light)', fontWeight: 600 }}>DAILY BUDGET</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>${dest.dailyBudgetEstimate}/day</span>
+                  </div>
+                  
                   <Button
+                    size="sm"
                     variant="secondary"
-                    onClick={() => {
-                      setActiveTripId(nextTrip.id);
-                      setCurrentView('trip-summary');
-                    }}
-                    rightIcon={<ArrowRight size={14} />}
+                    onClick={() => handleQuickPlan(dest.name)}
+                    style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: 'var(--radius-sm)' }}
                   >
-                    View Details
+                    Add to Trip
                   </Button>
                 </div>
               </div>
             </div>
-          ) : (
-            <div
-              className="glass-panel"
-              style={{
-                borderRadius: 'var(--radius-xl)',
-                padding: '2rem',
-                textAlign: 'center',
-                backgroundColor: 'var(--bg-secondary)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              <Calendar size={40} color="var(--text-light)" />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>No upcoming trips planned</h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', maxWidth: '320px' }}>
-                Start designing your next custom multi-city itinerary now with VoyageIQ.
-              </p>
-              <Button onClick={() => setCurrentView('plan-trip')} variant="primary" size="sm">
-                Create Itinerary
-              </Button>
-            </div>
-          )}
+          ))}
+        </div>
+      </div>
 
-          {/* Recommendations Header */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Explore Curated Getaways</h2>
-              <button
-                onClick={() => setCurrentView('explore')}
-                style={{ fontSize: '0.85rem', color: 'var(--color-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                See All <ArrowRight size={14} />
-              </button>
-            </div>
-            {/* Grid display */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-              {mockDestinations.slice(0, 2).map((dest) => (
-                <DestinationCard key={dest.id} destination={dest} onAddTrip={handleQuickPlan} />
-              ))}
-            </div>
-          </div>
+      {/* ==================== SECTION 4: YOUR RECENT TRIPS ==================== */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+            Your Recent Trips
+          </h2>
+          <button
+            onClick={() => setCurrentView('my-trips')}
+            style={{ fontSize: '0.825rem', color: 'var(--color-primary)', fontWeight: 700, cursor: 'pointer' }}
+          >
+            View All
+          </button>
         </div>
 
-        {/* Right Column: Budgets & Insights */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Dynamic Budget Tracker */}
-          {nextTrip ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Active Budget</h3>
-              <BudgetProgress
-                totalSpent={nextTrip.destinations.reduce(
-                  (sum, dest) => sum + dest.activities.reduce((s, act) => s + act.cost, 0),
-                  0
-                )}
-                budgetLimit={nextTrip.budgetLimit}
-              />
-            </div>
-          ) : null}
+        <div className="grid-cols-3">
+          {trips.slice(0, 3).map((trip) => {
+            const spent = trip.destinations.reduce(
+              (sum, dest) => sum + dest.activities.reduce((s, act) => s + act.cost, 0),
+              0
+            );
+            
+            const getStatusBadge = () => {
+              const today = new Date();
+              today.setHours(0,0,0,0);
+              const start = new Date(trip.startDate);
+              const end = new Date(trip.endDate);
 
-          {/* Smart Travel Insights */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-              Travel Alerts & Insights
-            </h3>
+              if (today > end) return <Badge variant="neutral">Completed</Badge>;
+              if (today >= start && today <= end) return <Badge variant="success">Active</Badge>;
+              return <Badge variant="info">Upcoming</Badge>;
+            };
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {insights.map((ins) => (
-                <div
-                  key={ins.id}
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color-light)',
-                    borderRadius: 'var(--radius-lg)',
-                    padding: '1rem',
-                    boxShadow: 'var(--shadow-sm)',
-                    display: 'flex',
-                    gap: '12px',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '6px',
-                      borderRadius: '50%',
-                      backgroundColor: ins.type === 'budget' ? 'var(--color-error-light)' : ins.type === 'price' ? 'var(--color-success-light)' : 'var(--color-accent-warm-light)',
-                      display: 'flex',
-                    }}
-                  >
-                    <AlertCircle
-                      size={16}
-                      color={ins.type === 'budget' ? 'var(--color-error)' : ins.type === 'price' ? 'var(--color-success)' : 'var(--color-accent-warm)'}
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-                    <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      {ins.title}
-                    </span>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                      {ins.message}
-                    </p>
+            return (
+              <div
+                key={trip.id}
+                style={{
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: 'var(--radius-xl)',
+                  border: '1px solid var(--border-color-light)',
+                  overflow: 'hidden',
+                  boxShadow: 'var(--shadow-sm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'none';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                }}
+              >
+                {/* Photo cover */}
+                <div style={{ height: '110px', position: 'relative' }}>
+                  <img
+                    src={trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800'}
+                    alt={trip.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.15)' }} />
+                  
+                  <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
+                    {getStatusBadge()}
                   </div>
                 </div>
-              ))}
+
+                <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                  <div>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {trip.name}
+                    </h4>
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
+                      {trip.startDate} to {trip.endDate}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color-light)', paddingTop: '0.5rem', marginTop: 'auto' }}>
+                    <span>{trip.destinations.length} Stops</span>
+                    <span>Budget: {spent > 0 ? `$${spent.toLocaleString()}/` : ''}${trip.budgetLimit.toLocaleString()}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setActiveTripId(trip.id);
+                        setCurrentView('plan-trip');
+                      }}
+                      style={{ flex: 1, padding: '4px 0', fontSize: '0.75rem' }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setActiveTripId(trip.id);
+                        setCurrentView('trip-summary');
+                      }}
+                      style={{ flex: 1, padding: '4px 0', fontSize: '0.75rem' }}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ==================== SECTION 5: SMART TRAVEL INSIGHT ==================== */}
+      <div>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+          Smart Travel Insight
+        </h2>
+
+        <div
+          className="glass-panel animate-fade-in"
+          style={{
+            borderRadius: 'var(--radius-xl)',
+            backgroundColor: 'var(--bg-secondary)',
+            padding: '1.5rem 2rem',
+            border: '1px solid var(--border-color-light)',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1.5rem',
+            background: 'linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flex: 1, minWidth: '240px' }}>
+            <div
+              style={{
+                padding: '12px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-success-light)',
+                color: 'var(--color-success)',
+                display: 'flex',
+                flexShrink: 0,
+              }}
+            >
+              <Award size={26} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Budget Optimizer Insight
+              </span>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                Your next trip is currently **82%** within your planned budget limits. You have managed your transportation and activity slots efficiently.
+              </p>
+            </div>
+          </div>
+
+          {/* Radial Circular SVG Gauge Indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+            <div style={{ position: 'relative', width: '74px', height: '74px', display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
+              <svg width="74" height="74" viewBox="0 0 74 74" style={{ transform: 'rotate(-90deg)' }}>
+                {/* Background Ring */}
+                <circle
+                  cx="37"
+                  cy="37"
+                  r={radius}
+                  fill="transparent"
+                  stroke="var(--border-color-light)"
+                  strokeWidth="6"
+                />
+                {/* Active Colored Arc */}
+                <circle
+                  cx="37"
+                  cy="37"
+                  r={radius}
+                  fill="transparent"
+                  stroke="var(--color-success)"
+                  strokeWidth="6"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+                />
+              </svg>
+              {/* Inner Text label */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  color: 'var(--text-primary)',
+                }}
+              >
+                82%
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              <span style={{ color: 'var(--color-success)' }}>★ Optimal Score</span>
+              <span>+$180 Saved Est</span>
             </div>
           </div>
         </div>
       </div>
+
     </div>
   );
 };
