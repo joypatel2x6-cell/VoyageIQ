@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp, type ViewType } from '../context/AppContext';
+import { api } from '../services/api';
 import { Compass, Search, Bell, LayoutDashboard, Map, CalendarPlus, Share2 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentView, setCurrentView, insights } = useApp();
+  const { currentView, setCurrentView, isAuthenticated, currentUser } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Load notifications from API when user is authenticated
+  useEffect(() => {
+    if (!isAuthenticated) { setNotifications([]); setUnreadCount(0); return; }
+    api.notifications.getNotifications({ limit: '10' })
+      .then((res) => {
+        if (res.success) {
+          setNotifications(res.data || []);
+          setUnreadCount(res.unreadCount || 0);
+        }
+      })
+      .catch(() => { /* fail silently */ });
+  }, [isAuthenticated]);
 
   // Simple view mapper to get title
   const getViewTitle = () => {
@@ -127,19 +143,28 @@ export const Navbar: React.FC = () => {
               onMouseLeave={(e) => !showNotifications && (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <Bell size={20} />
-              {insights.length > 0 && (
+              {unreadCount > 0 && (
                 <span
                   style={{
                     position: 'absolute',
                     top: '2px',
                     right: '2px',
-                    width: '8px',
-                    height: '8px',
+                    minWidth: '16px',
+                    height: '16px',
                     borderRadius: '50%',
                     backgroundColor: 'var(--color-warning)',
                     border: '2px solid var(--bg-secondary)',
+                    fontSize: '0.55rem',
+                    fontWeight: 800,
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 2px',
                   }}
-                />
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
               )}
             </button>
 
@@ -159,13 +184,15 @@ export const Navbar: React.FC = () => {
                 }}
               >
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Smart Insights</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{insights.length} alerts</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Notifications</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{unreadCount} unread</span>
                 </div>
                 <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                  {insights.map((ins) => (
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.82rem' }}>No notifications yet</div>
+                  ) : notifications.map((notif: any) => (
                     <div
-                      key={ins.id}
+                      key={notif.id}
                       style={{
                         padding: '12px 16px',
                         borderBottom: '1px solid var(--border-color-light)',
@@ -173,18 +200,19 @@ export const Navbar: React.FC = () => {
                         flexDirection: 'column',
                         gap: '4px',
                         cursor: 'pointer',
+                        backgroundColor: notif.isRead ? 'transparent' : 'rgba(99,102,241,0.05)',
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.isRead ? 'transparent' : 'rgba(99,102,241,0.05)'}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: ins.type === 'budget' ? 'var(--color-error)' : ins.type === 'price' ? 'var(--color-success)' : 'var(--color-accent-warm)' }}>
-                          {ins.title}
+                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-primary)' }}>
+                          {notif.title || notif.type}
                         </span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-light)' }}>Active</span>
+                        {!notif.isRead && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-primary)', flexShrink: 0 }} />}
                       </div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                        {ins.message}
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4', margin: 0 }}>
+                        {notif.message}
                       </p>
                     </div>
                   ))}
@@ -198,10 +226,10 @@ export const Navbar: React.FC = () => {
             )}
           </div>
 
-          {/* User profile image (mobile) */}
+          {/* User profile image */}
           <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-            alt="Ayush"
+            src={currentUser?.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+            alt={currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User'}
             style={{
               width: '32px',
               height: '32px',
@@ -209,6 +237,7 @@ export const Navbar: React.FC = () => {
               objectFit: 'cover',
               cursor: 'pointer',
             }}
+            onClick={() => setCurrentView('profile' as any)}
           />
         </div>
       </header>

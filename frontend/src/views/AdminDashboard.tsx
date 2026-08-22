@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { api } from '../services/api';
 import {
   Users, Map, Globe, Activity, TrendingUp, BarChart2,
   Search, ChevronDown, ChevronUp, Eye, UserX, Trash2,
@@ -71,6 +72,9 @@ const TRAVEL_STYLES = [
   { name: 'Luxury',   value: 21, color: '#f59e0b' },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Types
+// ─────────────────────────────────────────────────────────────────────────────
 type UserStatus = 'active' | 'suspended' | 'new';
 interface AdminUser {
   id: string;
@@ -83,21 +87,6 @@ interface AdminUser {
   avatar: string;
   totalSpend: number;
 }
-
-const MOCK_USERS: AdminUser[] = [
-  { id: 'u1', name: 'Ayush Patel',      email: 'ayush@voyageiq.com',    country: 'India',       trips: 8,  joined: '2025-01-12', status: 'active',    avatar: 'AP', totalSpend: 284000 },
-  { id: 'u2', name: 'Sofia Meier',      email: 'sofia@email.de',        country: 'Germany',     trips: 14, joined: '2025-02-08', status: 'active',    avatar: 'SM', totalSpend: 612000 },
-  { id: 'u3', name: 'James Carter',     email: 'jcarter@outlook.com',   country: 'USA',         trips: 6,  joined: '2025-03-17', status: 'active',    avatar: 'JC', totalSpend: 193000 },
-  { id: 'u4', name: 'Priya Sharma',     email: 'priya.s@gmail.com',     country: 'India',       trips: 11, joined: '2025-01-28', status: 'active',    avatar: 'PS', totalSpend: 347000 },
-  { id: 'u5', name: 'Lucas Dupont',     email: 'ldupont@free.fr',       country: 'France',      trips: 3,  joined: '2025-04-05', status: 'suspended', avatar: 'LD', totalSpend: 81000 },
-  { id: 'u6', name: 'Yuki Tanaka',      email: 'yuki@yahoo.jp',         country: 'Japan',       trips: 19, joined: '2024-11-22', status: 'active',    avatar: 'YT', totalSpend: 924000 },
-  { id: 'u7', name: 'Emma Wilson',      email: 'emma.w@icloud.com',     country: 'Australia',   trips: 7,  joined: '2025-05-14', status: 'new',       avatar: 'EW', totalSpend: 218000 },
-  { id: 'u8', name: 'Marco Rossi',      email: 'mrossi@libero.it',      country: 'Italy',       trips: 5,  joined: '2025-06-02', status: 'active',    avatar: 'MR', totalSpend: 142000 },
-  { id: 'u9', name: 'Anika van der Berg', email: 'anika@kpn.nl',        country: 'Netherlands', trips: 9,  joined: '2025-02-19', status: 'active',    avatar: 'AB', totalSpend: 371000 },
-  { id: 'u10', name: 'Carlos Rivera',   email: 'crivera@gmail.com',     country: 'Mexico',      trips: 4,  joined: '2025-07-08', status: 'new',       avatar: 'CR', totalSpend: 98000 },
-  { id: 'u11', name: 'Fatima Al-Zahrawi', email: 'fatima@hotmail.ae',   country: 'UAE',         trips: 12, joined: '2025-01-05', status: 'active',    avatar: 'FA', totalSpend: 528000 },
-  { id: 'u12', name: 'Lena Schmidt',    email: 'lena.s@web.de',         country: 'Germany',     trips: 2,  joined: '2025-08-01', status: 'suspended', avatar: 'LS', totalSpend: 54000 },
-];
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  KPI Card
@@ -206,6 +195,70 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [confirmDelete, setConfirm] = useState<string | null>(null);
   const [activeTab, setActiveTab]   = useState<'overview' | 'users' | 'destinations' | 'activities'>('overview');
 
+  // Live data state
+  const [stats, setStats]           = useState<any>(null);
+  const [chartData, setChartData]   = useState(MONTHLY_GROWTH);
+  const [popularCities, setCities]  = useState(POPULAR_DESTINATIONS);
+  const [popularActs, setPopActs]   = useState(POPULAR_ACTIVITIES);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Fetch all live admin data on mount
+  useEffect(() => {
+    Promise.allSettled([
+      api.admin.getStatistics(),
+      api.admin.getUsers({ limit: '50' }),
+      api.admin.getUserTrends(),
+      api.admin.getPopularCities(10),
+      api.admin.getPopularActivities(10),
+    ]).then(([statsRes, usersRes, trendsRes, citiesRes, actsRes]) => {
+      if (statsRes.status === 'fulfilled' && statsRes.value.success) {
+        setStats(statsRes.value.data);
+      }
+      if (usersRes.status === 'fulfilled' && usersRes.value.success) {
+        const mapped: AdminUser[] = (usersRes.value.data || []).map((u: any) => ({
+          id: u.id,
+          name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+          email: u.email,
+          country: u.country || '—',
+          trips: u._count?.trips ?? u.tripsCount ?? 0,
+          joined: u.createdAt ? u.createdAt.split('T')[0] : '—',
+          status: u.isActive === false ? 'suspended' : (u.role === 'new' ? 'new' : 'active') as UserStatus,
+          avatar: `${(u.firstName?.[0] || '?')}${(u.lastName?.[0] || '')}`.toUpperCase(),
+          totalSpend: u.totalSpend ?? 0,
+        }));
+        if (mapped.length > 0) setUsers(mapped);
+      }
+      if (trendsRes.status === 'fulfilled' && trendsRes.value.success && (trendsRes.value.data || []).length > 0) {
+        setChartData(trendsRes.value.data);
+      }
+      if (citiesRes.status === 'fulfilled' && citiesRes.value.success && (citiesRes.value.data || []).length > 0) {
+        const max = citiesRes.value.data[0]?.trips ?? 1;
+        setCities(citiesRes.value.data.map((c: any, i: number) => ({
+          city: c.city || c.name || 'Unknown',
+          trips: c.trips ?? c._count ?? 0,
+          pct: Math.round(((c.trips ?? c._count ?? 0) / max) * 100),
+          color: POPULAR_DESTINATIONS[i % POPULAR_DESTINATIONS.length]?.color || '#6366f1',
+        })));
+      }
+      if (actsRes.status === 'fulfilled' && actsRes.value.success && (actsRes.value.data || []).length > 0) {
+        setPopActs(actsRes.value.data.map((a: any) => ({
+          name: a.name || a.activity || 'Unknown',
+          count: a.count ?? a._count ?? 0,
+          category: a.category || 'Activity',
+        })));
+      }
+      setDataLoaded(true);
+    });
+  }, []);
+
+  // KPI values — prefer live stats, fall back to mock
+  const totalUsers    = stats?.totalUsers    ?? 12847;
+  const totalTrips    = stats?.totalTrips    ?? 38291;
+  const publicTrips   = stats?.publicTrips   ?? 14673;
+  const citiesVisited = stats?.totalCities   ?? 892;
+  const activitiesAdded = stats?.totalActivities ?? 186450;
+
+
   // Filter & sort users
   const filtered = useMemo(() => {
     let list = users.filter(u => {
@@ -231,27 +284,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   };
 
   const handleSuspend = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' as UserStatus } : u));
+    const user = users.find(u => u.id === id);
+    const nextActive = user?.status === 'suspended'; // if suspended → make active (isActive: true)
+    setUsers(prev => prev.map(u => u.id === id
+      ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' as UserStatus }
+      : u
+    ));
+    api.admin.updateUserStatus(id, { isActive: nextActive }).catch(() => {
+      // Revert on failure
+      setUsers(prev => prev.map(u => u.id === id
+        ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' as UserStatus }
+        : u
+      ));
+    });
   };
 
   const handleDelete = (id: string) => {
     setUsers(prev => prev.filter(u => u.id !== id));
     setConfirm(null);
+    api.admin.deleteUser(id).catch(() => {});
   };
 
-  // Slice data by date range
+  // Slice chart data by date range (works for both live and mock data)
   const rangeMonths = { '7d': 1, '30d': 3, '90d': 6, '1y': 12 }[dateRange];
-  const chartData = MONTHLY_GROWTH.slice(-rangeMonths);
-
-  // KPI totals
-  const totalUsers    = 12847;
-  const totalTrips    = 38291;
-  const publicTrips   = 14673;
-  const citiesVisited = 892;
-  const activitiesAdded = 186450;
+  const slicedChartData = Array.isArray(chartData) ? chartData.slice(-rangeMonths) : [];
 
   const SortIcon = ({ k }: { k: keyof AdminUser }) =>
     sortKey === k ? (sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <span style={{ opacity: 0.3 }}><ChevronDown size={12} /></span>;
+
 
   const ColHeader: React.FC<{ label: string; k: keyof AdminUser; align?: string }> = ({ label, k, align }) => (
     <th onClick={() => handleSort(k)}
@@ -331,7 +391,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <Section title="User Growth" icon={<TrendingUp size={16} />}>
                 <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={chartData}>
+                  <AreaChart data={slicedChartData}>
                     <defs>
                       <linearGradient id="ugGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -349,7 +409,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
 
               <Section title="Trips Created" icon={<Map size={16} />}>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData} barSize={18}>
+                  <BarChart data={slicedChartData} barSize={18}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
@@ -549,13 +609,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               {/* Horizontal bar chart */}
               <Section title="Most Planned Destinations" icon={<Compass size={16} />}>
                 <ResponsiveContainer width="100%" height={340}>
-                  <BarChart data={POPULAR_DESTINATIONS.slice(0, 8)} layout="vertical" barSize={16}>
+                  <BarChart data={popularCities.slice(0, 8)} layout="vertical" barSize={16}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="city" width={130} tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar dataKey="trips" name="Trips" radius={[0, 4, 4, 0]}>
-                      {POPULAR_DESTINATIONS.slice(0, 8).map((e, i) => <Cell key={i} fill={e.color} />)}
+                      {popularCities.slice(0, 8).map((e, i) => <Cell key={i} fill={e.color} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -564,7 +624,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
               {/* Ranked table */}
               <Section title="Destination Rankings" icon={<BarChart2 size={16} />}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {POPULAR_DESTINATIONS.map((d, i) => (
+                  {popularCities.map((d, i) => (
                     <div key={d.city} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-md)', backgroundColor: i === 0 ? 'rgba(99,102,241,0.06)' : 'transparent' }}>
                       <div style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: i < 3 ? d.color + '22' : 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 900, color: i < 3 ? d.color : 'var(--text-muted)', flexShrink: 0 }}>
                         {i + 1}
@@ -590,7 +650,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
               <Section title="Most Added Activities" icon={<Activity size={16} />}>
                 <ResponsiveContainer width="100%" height={360}>
-                  <BarChart data={POPULAR_ACTIVITIES} layout="vertical" barSize={16}>
+                  <BarChart data={popularActs} layout="vertical" barSize={16}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />

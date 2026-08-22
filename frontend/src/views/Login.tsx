@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Compass, Eye, EyeOff, LogIn, Sparkles, User, Upload, Trash2, Check } from 'lucide-react';
+import { api, setAuthToken } from '../services/api';
 
 type TravelPreference = 'Adventure' | 'Culture' | 'Food' | 'Nature' | 'Shopping' | 'Luxury' | 'Budget Travel';
 type TravelStyle = 'Budget' | 'Balanced' | 'Luxury';
@@ -90,7 +91,7 @@ export const Login: React.FC = () => {
     showToast('Profile picture removed.', 'warning');
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginEmailError('');
     setLoginPasswordError('');
@@ -113,12 +114,14 @@ export const Login: React.FC = () => {
     if (!isValid) return;
 
     setIsLoading(true);
-    setTimeout(() => {
-      if (loginPassword === 'error123') {
-        setIsLoading(false);
-        showToast('Authentication failed: Invalid credentials.', 'error');
-        setLoginPasswordError('Incorrect password. Type any other password.');
-        return;
+    try {
+      const response = await api.auth.login({
+        email: loginEmail.trim(),
+        password: loginPassword,
+      });
+
+      if (response.token) {
+        setAuthToken(response.token);
       }
 
       setIsLoading(false);
@@ -126,12 +129,17 @@ export const Login: React.FC = () => {
       setTimeout(() => {
         setIsAuthenticated(true);
         setCurrentView('dashboard');
-        showToast(`Welcome back! Ready for your next trip?`, 'success');
+        showToast(`Welcome back${response.user?.firstName ? ', ' + response.user.firstName : ''}! Ready for your next trip?`, 'success');
       }, 500);
-    }, 1500);
+    } catch (error: any) {
+      setIsLoading(false);
+      const msg = error.message || 'Authentication failed: Invalid credentials.';
+      showToast(msg, 'error');
+      setLoginPasswordError(msg);
+    }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
     
@@ -145,16 +153,14 @@ export const Login: React.FC = () => {
       errors.email = 'Please enter a valid email address';
     }
 
-    if (!phone.trim()) {
-      errors.phone = 'Phone number is required';
-    } else if (!validatePhone(phone)) {
+    if (phone.trim() && !validatePhone(phone)) {
       errors.phone = 'Please enter a valid phone number';
     }
 
     if (!regPassword) {
       errors.password = 'Password is required';
-    } else if (regPassword.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+    } else if (regPassword.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
     }
 
     if (!confirmPassword) {
@@ -162,9 +168,6 @@ export const Login: React.FC = () => {
     } else if (regPassword !== confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
-
-    if (!city.trim()) errors.city = 'City is required';
-    if (!country.trim()) errors.country = 'Country is required';
 
     setRegErrors(errors);
 
@@ -174,7 +177,24 @@ export const Login: React.FC = () => {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await api.auth.register({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: regEmail.trim(),
+        phone: phone.trim() || undefined,
+        password: regPassword,
+        confirmPassword: confirmPassword,
+        city: city.trim() || undefined,
+        country: country.trim() || undefined,
+        bio: additionalInfo.trim() || undefined,
+        profileImage: avatarUrl || undefined,
+      });
+
+      if (response.token) {
+        setAuthToken(response.token);
+      }
+
       setIsLoading(false);
       setIsSuccess(true);
       setTimeout(() => {
@@ -182,7 +202,10 @@ export const Login: React.FC = () => {
         setCurrentView('dashboard');
         showToast(`Welcome to VoyageIQ, ${firstName}! Your account is ready.`, 'success');
       }, 500);
-    }, 1500);
+    } catch (error: any) {
+      setIsLoading(false);
+      showToast(error.message || 'Registration failed.', 'error');
+    }
   };
 
   return (

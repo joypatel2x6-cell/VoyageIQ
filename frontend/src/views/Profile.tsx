@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Button } from '../components/ui/Button';
+import { api } from '../services/api';
 import {
   User, Mail, Phone, MapPin, Globe, Lock, Bell, Shield,
   Trash2, Camera, Check, ChevronDown, ChevronRight,
@@ -99,22 +100,40 @@ const DeleteDialog: React.FC<{ onConfirm: () => void; onCancel: () => void }> = 
 
 // ── Main Profile Page ──────────────────────────────────────────────────────────
 export const Profile: React.FC = () => {
-  const { showToast, logoutUser, setCurrentView } = useApp();
+  const { showToast, logoutUser, setCurrentView, currentUser } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Profile state
-  const [avatar, setAvatar]     = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80');
-  const [firstName, setFirst]   = useState('Ayush');
-  const [lastName, setLast]     = useState('Patel');
-  const [email, setEmail]       = useState('ayush@voyageiq.com');
-  const [phone, setPhone]       = useState('+91 98765 43210');
-  const [city, setCity]         = useState('Mumbai');
-  const [country, setCountry]   = useState('India');
-  const [bio, setBio]           = useState('Passionate explorer chasing sunsets, street food, and hidden gems around the world. 🌍');
-  const [language, setLanguage] = useState('English');
-  const [travelStyle, setStyle] = useState<TravelStyle>('Balanced');
-  const [prefs, setPrefs]       = useState<TravelPref[]>(['Adventure', 'Food & Dining', 'Culture']);
+  // Profile state — initialized from currentUser (populated after login)
+  const [avatar, setAvatar]     = useState(currentUser?.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80');
+  const [firstName, setFirst]   = useState(currentUser?.firstName || '');
+  const [lastName, setLast]     = useState(currentUser?.lastName || '');
+  const [email, setEmail]       = useState(currentUser?.email || '');
+  const [phone, setPhone]       = useState(currentUser?.phone || '');
+  const [city, setCity]         = useState(currentUser?.city || '');
+  const [country, setCountry]   = useState(currentUser?.country || '');
+  const [bio, setBio]           = useState(currentUser?.bio || '');
+  const [language, setLanguage] = useState(currentUser?.language || 'English');
+  const [travelStyle, setStyle] = useState<TravelStyle>((currentUser?.travelStyle as TravelStyle) || 'Balanced');
+  const [prefs, setPrefs]       = useState<TravelPref[]>(currentUser?.preferences || []);
   const [savedDests, setSaved]  = useState(SAVED_DESTINATIONS);
+
+  // Sync profile state when currentUser loads (e.g. after token validation on refresh)
+  useEffect(() => {
+    if (currentUser) {
+      setAvatar(currentUser.profileImage || avatar);
+      setFirst(currentUser.firstName || '');
+      setLast(currentUser.lastName || '');
+      setEmail(currentUser.email || '');
+      setPhone(currentUser.phone || '');
+      setCity(currentUser.city || '');
+      setCountry(currentUser.country || '');
+      setBio(currentUser.bio || '');
+      setLanguage(currentUser.language || 'English');
+      setStyle((currentUser.travelStyle as TravelStyle) || 'Balanced');
+      setPrefs(currentUser.preferences || []);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -176,7 +195,7 @@ export const Profile: React.FC = () => {
     return errs;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs = validateProfile();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -185,13 +204,26 @@ export const Profile: React.FC = () => {
     }
     setErrors({});
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      await api.users.updateProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim() || undefined,
+        city: city.trim() || undefined,
+        country: country.trim() || undefined,
+        bio: bio.trim() || undefined,
+        travelStyle,
+        preferences: prefs,
+      });
       showToast('Profile saved successfully!', 'success');
-    }, 1000);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save profile.', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!currentPw) errs.currentPw = 'Current password is required';
@@ -199,14 +231,28 @@ export const Profile: React.FC = () => {
     if (newPw !== confirmPw) errs.confirmPw = 'Passwords do not match';
     if (Object.keys(errs).length > 0) { setPwErrors(errs); return; }
     setPwErrors({});
-    showToast('Password changed successfully!', 'success');
-    setCurrentPw(''); setNewPw(''); setConfirmPw('');
-    setPwSection(false);
+    try {
+      await api.users.changePassword({
+        currentPassword: currentPw,
+        newPassword: newPw,
+        confirmPassword: confirmPw,
+      });
+      showToast('Password changed successfully!', 'success');
+      setCurrentPw(''); setNewPw(''); setConfirmPw('');
+      setPwSection(false);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to change password.', 'error');
+    }
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     setShowDelete(false);
-    showToast('Account deletion scheduled. You will be logged out.', 'warning');
+    try {
+      await api.users.deleteAccount();
+      showToast('Account deleted. Signing you out...', 'warning');
+    } catch {
+      showToast('Account deletion scheduled. You will be logged out.', 'warning');
+    }
     setTimeout(() => logoutUser(), 1500);
   };
 
