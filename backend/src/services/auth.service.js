@@ -137,10 +137,108 @@ const getUserById = async (userId) => {
   return sanitizeUser(user);
 };
 
+/**
+ * Handle Google OAuth callback: exchange code for profile details and find/create user
+ * @param {string} code Authorization code from Google redirect
+ * @returns {Promise<{user: Object, token: string}>}
+ */
+const handleGoogleCallback = async (code) => {
+  // 1. Exchange auth code for access token
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      code,
+      client_id: config.googleClientId,
+      client_secret: config.googleClientSecret,
+      redirect_uri: config.googleCallbackUrl,
+      grant_type: 'authorization_code',
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const errorBody = await tokenResponse.text();
+    console.error('Google token exchange error details:', errorBody);
+    throw new ApiError(400, 'Failed to exchange authorization code with Google.');
+  }
+
+  const tokens = await tokenResponse.json();
+
+  // 2. Fetch user profile using access token
+  const profileResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+    },
+  });
+
+  if (!profileResponse.ok) {
+    throw new ApiError(400, 'Failed to fetch user profile from Google.');
+  }
+
+  const profile = await profileResponse.json();
+
+  if (!profile.email) {
+    throw new ApiError(400, 'Google account is missing a verified email address.');
+  }
+
+  const emailNormalized = profile.email.toLowerCase();
+
+  // 3. Find user by googleId
+  let user = await prisma.user.findUnique({
+    where: { googleId: profile.sub },
+  });
+
+  // 4. If not found by googleId, lookup by email (for email/password match)
+  if (!user) {
+    user = await prisma.user.findUnique({
+      where: { email: emailNormalized },
+    });
+
+    if (user) {
+      // Safely link the Google identity to existing local account
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId: profile.sub,
+          authProvider: 'google',
+          // Optionally preserve/update profile image if it is missing
+          profileImage: user.profileImage || profile.picture || null,
+        },
+      });
+    }
+  }
+
+  // 5. If user still does not exist, create a new record
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        firstName: profile.given_name || 'Google',
+        lastName: profile.family_name || 'User',
+        email: emailNormalized,
+        googleId: profile.sub,
+        authProvider: 'google',
+        profileImage: profile.picture || null,
+        passwordHash: null, // Google logins don't have passwords
+      },
+    });
+  }
+
+  // 6. Generate VoyageIQ session JWT token
+  const sessionToken = generateToken({ userId: user.id, email: user.email });
+
+  return {
+    user: sanitizeUser(user),
+    token: sessionToken,
+  };
+};
+
 module.exports = {
   generateToken,
   sanitizeUser,
   registerUser,
   loginUser,
   getUserById,
+  handleGoogleCallback,
 };

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { trips, setCurrentView, setActiveTripId, addTrip } = useApp();
+  const { trips, setCurrentView, setActiveTripId, addTrip, currentUser } = useApp();
   const carouselRef = useRef<HTMLDivElement>(null);
 
   // Find the next upcoming trip (closest start date that is in the future)
@@ -101,7 +101,7 @@ export const Dashboard: React.FC = () => {
           <Sparkles size={12} color="var(--color-secondary)" /> Premium Intelligence
         </div>
         <span style={{ fontSize: '1rem', fontWeight: 600, opacity: 0.9 }}>
-          Good morning, Ayush 👋
+          Good morning, {currentUser.firstName} 👋
         </span>
         <h1 style={{ fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: '1.15' }}>
           Where will you go next?

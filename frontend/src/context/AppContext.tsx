@@ -1,9 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Trip, Activity, CityDestination, CommunityPost } from '../data/mockData';
 import { mockTrips, mockCommunityPosts, mockInsights } from '../data/mockData';
-import { api, getAuthToken, removeAuthToken } from '../services/api';
 
-export type ViewType = 'dashboard' | 'my-trips' | 'plan-trip' | 'explore' | 'community' | 'calendar' | 'trip-summary' | 'things-to-do' | 'profile' | 'shared-trip' | 'insights';
+export type ViewType =
+  | 'dashboard' | 'my-trips' | 'plan-trip' | 'explore' | 'community'
+  | 'calendar'  | 'trip-summary' | 'things-to-do' | 'profile' | 'shared-trip'
+  | 'insights';
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Types
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface ToastMessage {
   id: string;
@@ -11,18 +17,49 @@ export interface ToastMessage {
   type: 'success' | 'error' | 'warning' | 'info';
 }
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  type: 'trip' | 'budget' | 'community' | 'system';
+  read: boolean;
+  timestamp: Date;
+  actionView?: ViewType;
+  tripId?: string;
+}
+
+export interface CurrentUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  city: string;
+  country: string;
+  avatarUrl: string | null;
+  preferences: string[];
+  travelStyle: 'Budget' | 'Balanced' | 'Luxury';
+  language: string;
+  joinedAt: string;
+}
+
 interface AppContextType {
+  // Navigation
   currentView: ViewType;
   setCurrentView: (view: ViewType) => void;
+
+  // User
+  currentUser: CurrentUser;
+  updateUser: (updates: Partial<CurrentUser>) => void;
+  isAuthenticated: boolean;
+  setIsAuthenticated: (val: boolean) => void;
+  loginUserDirectly: (token: string, user: CurrentUser) => void;
+  logoutUser: () => void;
+
+  // Trips
   trips: Trip[];
   activeTripId: string | null;
   setActiveTripId: (id: string | null) => void;
-  communityPosts: CommunityPost[];
-  communityLoading: boolean;
-  insights: typeof mockInsights;
-  toasts: ToastMessage[];
-  showToast: (message: string, type?: ToastMessage['type']) => void;
-  removeToast: (id: string) => void;
   addTrip: (trip: Omit<Trip, 'id' | 'likesCount' | 'commentsCount'>) => string;
   updateTrip: (trip: Trip) => void;
   deleteTrip: (id: string) => void;
@@ -31,183 +68,188 @@ interface AppContextType {
   addActivity: (tripId: string, cityId: string, activity: Omit<Activity, 'id'>) => void;
   removeActivity: (tripId: string, cityId: string, activityId: string) => void;
   cloneTrip: (communityTrip: Trip) => void;
+
+  // Community
+  communityPosts: CommunityPost[];
+  sharedTripId: string | null;
+  setSharedTripId: (id: string | null) => void;
   likeCommunityPost: (postId: string) => void;
-  isAuthenticated: boolean;
-  setIsAuthenticated: (val: boolean) => void;
-  currentUser: any | null;
-  logoutUser: () => void;
+
+  // Insights (legacy)
+  insights: typeof mockInsights;
+
+  // Notifications
+  notifications: AppNotification[];
+  unreadCount: number;
+  addNotification: (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  clearNotification: (id: string) => void;
+
+  // Toasts
+  toasts: ToastMessage[];
+  showToast: (message: string, type?: ToastMessage['type']) => void;
+  removeToast: (id: string) => void;
+
+  // Loading
+  isLoading: boolean;
+  setIsLoading: (v: boolean) => void;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Default current user
+// ─────────────────────────────────────────────────────────────────────────────
+const DEFAULT_USER: CurrentUser = {
+  id: 'user-1',
+  firstName: 'Ayush',
+  lastName: 'Patel',
+  email: 'ayush@voyageiq.com',
+  phone: '+91 98765 43210',
+  city: 'Mumbai',
+  country: 'India',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+  preferences: ['Adventure', 'Culture', 'Food'],
+  travelStyle: 'Balanced',
+  language: 'English',
+  joinedAt: '2025-01-15',
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Seed notifications
+// ─────────────────────────────────────────────────────────────────────────────
+const SEED_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: 'notif-1',
+    title: 'Welcome to VoyageIQ!',
+    body: 'Your account is ready. Start planning your first adventure.',
+    type: 'system',
+    read: false,
+    timestamp: new Date(Date.now() - 1000 * 60 * 5),
+    actionView: 'plan-trip',
+  },
+  {
+    id: 'notif-2',
+    title: 'Budget Alert — Japan Trip',
+    body: 'Your Japan trip is at 85% of the budget. Review activities to stay on track.',
+    type: 'budget',
+    read: false,
+    timestamp: new Date(Date.now() - 1000 * 60 * 30),
+    actionView: 'trip-summary',
+    tripId: 'trip-1',
+  },
+  {
+    id: 'notif-3',
+    title: 'New community trip',
+    body: 'Norwegian Fjords & Arctic Wilderness has 612 new likes this week.',
+    type: 'community',
+    read: true,
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    actionView: 'community',
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Context
+// ─────────────────────────────────────────────────────────────────────────────
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [trips, setTrips] = useState<Trip[]>(mockTrips);
-  const [activeTripId, setActiveTripId] = useState<string | null>('trip-1'); // Default to Japan trip
-  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
-  const [communityLoading, setCommunityLoading] = useState(true);
+  const [activeTripId, setActiveTripId] = useState<string | null>('trip-1');
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(mockCommunityPosts);
+  const [sharedTripId, setSharedTripId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [insights] = useState(mockInsights);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser>(DEFAULT_USER);
+  const [notifications, setNotifications] = useState<AppNotification[]>(SEED_NOTIFICATIONS);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load community posts from backend (public endpoint — no auth required)
-  const loadCommunityPosts = useCallback(async () => {
-    setCommunityLoading(true);
-    try {
-      const res = await api.community.getPosts();
-      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-        // Map backend shape → frontend CommunityPost shape
-        const mapped: CommunityPost[] = res.data.map((p: any) => ({
-          id: p.id,
-          authorName: p.authorName || (p.author ? `${p.author.firstName} ${p.author.lastName}` : 'Traveller'),
-          authorAvatar: p.authorAvatar || p.author?.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80',
-          likesCount: p.likesCount ?? p._count?.likes ?? 0,
-          commentsCount: p.commentsCount ?? p._count?.comments ?? 0,
-          tags: p.tags ?? [],
-          isLikedByMe: p.isLikedByMe ?? false,
-          trip: {
-            id: p.trip?.id ?? p.tripId ?? p.id,
-            name: p.trip?.name ?? p.title ?? 'Shared Trip',
-            description: p.trip?.description ?? p.description ?? '',
-            startDate: p.trip?.startDate ? p.trip.startDate.split('T')[0] : '',
-            endDate: p.trip?.endDate ? p.trip.endDate.split('T')[0] : '',
-            budgetLimit: p.trip?.budget ?? p.trip?.budgetLimit ?? 0,
-            currency: p.trip?.currency ?? 'USD',
-            isShared: true,
-            likesCount: p.likesCount ?? 0,
-            commentsCount: p.commentsCount ?? 0,
-            travelStyle: p.trip?.travelStyle ?? 'Balanced',
-            travelersCount: p.trip?.travelersCount ?? 1,
-            coverImage: p.trip?.coverImage ?? '',
-            collaborators: [],
-            destinations: p.trip?.stops?.map((s: any) => ({
-              id: s.id,
-              name: s.city?.name ?? 'City',
-              country: s.city?.country ?? '',
-              image: s.city?.image ?? 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800',
-              arrivalDate: s.arrivalDate ? s.arrivalDate.split('T')[0] : '',
-              departureDate: s.departureDate ? s.departureDate.split('T')[0] : '',
-              activities: s.activities?.map((a: any) => ({
-                id: a.id,
-                title: a.activity?.name ?? a.customTitle ?? 'Activity',
-                category: a.activity?.category ?? 'activity',
-                time: a.startTime ?? '10:00',
-                date: a.scheduledDate ? a.scheduledDate.split('T')[0] : '',
-                cost: Number(a.cost) || 0,
-                location: a.activity?.address ?? '',
-                rating: 4.5,
-                image: a.activity?.image ?? '',
-              })) ?? [],
-            })) ?? [],
-          },
-        }));
-        setCommunityPosts(mapped);
-      } else {
-        // Fall back to mock data if backend returns nothing
-        setCommunityPosts(mockCommunityPosts);
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // ── Auto-login on mount if token is saved ───────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem('voyageiq_token');
+    const storedUser = localStorage.getItem('voyageiq_user');
+    if (token && storedUser) {
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+        setIsAuthenticated(true);
+      } catch (e) {
+        localStorage.removeItem('voyageiq_token');
+        localStorage.removeItem('voyageiq_user');
       }
-    } catch {
-      // Silently fall back to mock data if backend is unavailable
-      setCommunityPosts(mockCommunityPosts);
-    } finally {
-      setCommunityLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadCommunityPosts();
-  }, [loadCommunityPosts]);
-
-  // Validate existing auth token & load user trips on mount
-  useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      api.auth.getMe()
-        .then((res) => {
-          if (res.success && res.user) {
-            setIsAuthenticated(true);
-            setCurrentUser(res.user);
-            // Load user trips from backend
-            return api.trips.getMyTrips();
-          }
-        })
-        .then((res) => {
-          if (res && res.success && res.data && res.data.trips && res.data.trips.length > 0) {
-            const formattedTrips: Trip[] = res.data.trips.map((t: any) => ({
-              id: t.id,
-              name: t.name,
-              description: t.description || '',
-              startDate: t.startDate ? t.startDate.split('T')[0] : '',
-              endDate: t.endDate ? t.endDate.split('T')[0] : '',
-              budgetLimit: t.budget || 0,
-              currency: t.currency || 'USD',
-              coverImage: t.coverImage || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800',
-              collaborators: [],
-              isShared: t.isPublic || false,
-              likesCount: 0,
-              commentsCount: 0,
-              destinations: t.stops ? t.stops.map((s: any) => ({
-                id: s.id,
-                name: s.city?.name || 'City',
-                country: s.city?.country || 'Country',
-                image: s.city?.image || 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800',
-                arrivalDate: s.arrivalDate ? s.arrivalDate.split('T')[0] : '',
-                departureDate: s.departureDate ? s.departureDate.split('T')[0] : '',
-                activities: s.activities ? s.activities.map((a: any) => ({
-                  id: a.id,
-                  title: a.activity?.name || a.customTitle || 'Activity',
-                  category: a.activity?.category || 'Sightseeing',
-                  time: a.startTime || '10:00 AM',
-                  date: a.scheduledDate ? a.scheduledDate.split('T')[0] : '',
-                  cost: Number(a.cost) || 0,
-                  location: a.activity?.address || '',
-                  rating: 4.8,
-                  image: a.activity?.image || 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800',
-                })) : [],
-              })) : [],
-            }));
-            setTrips(formattedTrips);
-            setActiveTripId(formattedTrips[0].id);
-          }
-        })
-        .catch(() => {
-          removeAuthToken();
-          setIsAuthenticated(false);
-          setCurrentUser(null);
-        });
-    }
-  }, []);
-
-  const logoutUser = () => {
-    api.auth.logout().catch(() => {});
-    removeAuthToken();
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setCurrentView('dashboard');
-    showToast('Successfully signed out.', 'info');
-  };
-
-  // Auto-remove toasts after 3.5 seconds
+  // ── Auto-remove toasts after 3.5s ─────────────────────────────────────────
   useEffect(() => {
     if (toasts.length > 0) {
-      const timer = setTimeout(() => {
-        setToasts((prev) => prev.slice(1));
-      }, 3500);
+      const timer = setTimeout(() => setToasts(prev => prev.slice(1)), 3500);
       return () => clearTimeout(timer);
     }
   }, [toasts]);
 
-  const showToast = (message: string, type: ToastMessage['type'] = 'success') => {
+  // ── Toast helpers ──────────────────────────────────────────────────────────
+  const showToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
-  };
+    setToasts(prev => [...prev, { id, message, type }]);
+  }, []);
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
-  const addTrip = (tripData: Omit<Trip, 'id' | 'likesCount' | 'commentsCount'>) => {
+  // ── Notification helpers ───────────────────────────────────────────────────
+  const addNotification = useCallback((n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotif: AppNotification = {
+      ...n,
+      id: `notif-${Math.random().toString(36).substring(2, 9)}`,
+      timestamp: new Date(),
+      read: false,
+    };
+    setNotifications(prev => [newNotif, ...prev.slice(0, 19)]); // keep last 20
+  }, []);
+
+  const markNotificationRead = useCallback((id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  }, []);
+
+  const markAllNotificationsRead = useCallback(() => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
+
+  const clearNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  // ── User helpers ───────────────────────────────────────────────────────────
+  const updateUser = useCallback((updates: Partial<CurrentUser>) => {
+    setCurrentUser(prev => {
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('voyageiq_user', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const loginUserDirectly = useCallback((token: string, user: CurrentUser) => {
+    localStorage.setItem('voyageiq_token', token);
+    localStorage.setItem('voyageiq_user', JSON.stringify(user));
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+  }, []);
+
+  const logoutUser = useCallback(() => {
+    localStorage.removeItem('voyageiq_token');
+    localStorage.removeItem('voyageiq_user');
+    setIsAuthenticated(false);
+    setCurrentView('dashboard');
+    showToast('Successfully signed out. See you next adventure! ✈️', 'info');
+  }, [showToast]);
+
+  // ── Trip CRUD ──────────────────────────────────────────────────────────────
+  const addTrip = useCallback((tripData: Omit<Trip, 'id' | 'likesCount' | 'commentsCount'>) => {
     const newId = `trip-${Math.random().toString(36).substring(2, 9)}`;
     const newTrip: Trip = {
       ...tripData,
@@ -216,301 +258,169 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       commentsCount: 0,
       destinations: tripData.destinations || [],
     };
-    setTrips((prev) => [newTrip, ...prev]);
+    setTrips(prev => [newTrip, ...prev]);
     setActiveTripId(newId);
-
-    // Sync with backend database if authenticated
-    if (getAuthToken()) {
-      api.trips.create({
-        name: tripData.name,
-        startDate: tripData.startDate || new Date().toISOString().split('T')[0],
-        endDate: tripData.endDate || new Date().toISOString().split('T')[0],
-        budget: tripData.budgetLimit || 1000,
-        currency: tripData.currency || 'USD',
-        coverImage: tripData.coverImage || '',
-        isPublic: tripData.isShared || false,
-      }).then((res) => {
-        if (res.success && res.trip) {
-          setTrips((prev) => prev.map((t) => t.id === newId ? { ...t, id: res.trip.id } : t));
-          if (activeTripId === newId) setActiveTripId(res.trip.id);
-        }
-      }).catch((err) => {
-        console.warn('Backend trip creation failed:', err.message);
-      });
-    }
-
-    showToast(`Trip "${newTrip.name}" created successfully!`, 'success');
+    showToast(`✈️ Trip "${newTrip.name}" created! Start adding cities.`, 'success');
+    addNotification({
+      title: 'New trip created',
+      body: `"${newTrip.name}" has been added to your trips.`,
+      type: 'trip',
+      actionView: 'plan-trip',
+      tripId: newId,
+    });
     return newId;
-  };
+  }, [showToast, addNotification]);
 
-  const updateTrip = (updatedTrip: Trip) => {
-    setTrips((prev) => prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t)));
-    
-    if (getAuthToken() && updatedTrip.id.includes('-')) {
-      api.trips.update(updatedTrip.id, {
-        name: updatedTrip.name,
-        budget: updatedTrip.budgetLimit,
-        isPublic: updatedTrip.isShared,
-      }).catch((err) => console.warn('Backend trip update failed:', err.message));
-    }
-
+  const updateTrip = useCallback((updatedTrip: Trip) => {
+    setTrips(prev => prev.map(t => t.id === updatedTrip.id ? updatedTrip : t));
     showToast(`Trip "${updatedTrip.name}" updated.`, 'info');
-  };
+  }, [showToast]);
 
-  const deleteTrip = (id: string) => {
-    const tripToDelete = trips.find((t) => t.id === id);
-    setTrips((prev) => prev.filter((t) => t.id !== id));
+  const deleteTrip = useCallback((id: string) => {
+    const tripToDelete = trips.find(t => t.id === id);
+    setTrips(prev => prev.filter(t => t.id !== id));
     if (activeTripId === id) {
-      setActiveTripId(trips.length > 1 ? trips.find(t => t.id !== id)?.id || null : null);
+      const remaining = trips.filter(t => t.id !== id);
+      setActiveTripId(remaining.length > 0 ? remaining[0].id : null);
     }
+    showToast(`Deleted "${tripToDelete?.name || 'trip'}"`, 'warning');
+  }, [trips, activeTripId, showToast]);
 
-    if (getAuthToken() && id.includes('-') && !id.startsWith('trip-')) {
-      api.trips.delete(id).catch((err) => console.warn('Backend trip deletion failed:', err.message));
-    }
-
-    showToast(`Deleted trip "${tripToDelete?.name || 'Unknown'}"`, 'warning');
-  };
-
-  const addCityToTrip = (tripId: string, cityData: Omit<CityDestination, 'id' | 'activities'>) => {
+  // ── City CRUD ──────────────────────────────────────────────────────────────
+  const addCityToTrip = useCallback((tripId: string, cityData: Omit<CityDestination, 'id' | 'activities'>) => {
     const cityId = `city-${Math.random().toString(36).substring(2, 9)}`;
-    const newCity: CityDestination = {
-      ...cityData,
-      id: cityId,
-      activities: []
-    };
+    const newCity: CityDestination = { ...cityData, id: cityId, activities: [] };
+    setTrips(prev => prev.map(t => {
+      if (t.id !== tripId) return t;
+      return { ...t, destinations: [...t.destinations, newCity] };
+    }));
+    showToast(`📍 ${cityData.name} added to your itinerary!`, 'success');
+  }, [showToast]);
 
-    setTrips((prev) =>
-      prev.map((t) => {
-        if (t.id === tripId) {
-          return {
-            ...t,
-            destinations: [...t.destinations, newCity]
-          };
-        }
-        return t;
-      })
-    );
+  const removeCityFromTrip = useCallback((tripId: string, cityId: string) => {
+    setTrips(prev => prev.map(t => {
+      if (t.id !== tripId) return t;
+      return { ...t, destinations: t.destinations.filter(c => c.id !== cityId) };
+    }));
+    showToast('City removed from itinerary.', 'warning');
+  }, [showToast]);
 
-    // Persist to backend if authenticated and trip has a real DB id
-    if (getAuthToken() && tripId && !tripId.startsWith('trip-')) {
-      api.stops.addStop(tripId, {
-        cityId: (cityData as any).cityId,
-        arrivalDate: cityData.arrivalDate,
-        departureDate: cityData.departureDate,
-      }).then((res) => {
-        if (res.success && res.stop) {
-          // Sync the real stop ID from DB back into state
-          setTrips((prev) =>
-            prev.map((t) => {
-              if (t.id === tripId) {
-                return {
-                  ...t,
-                  destinations: t.destinations.map((d) =>
-                    d.id === cityId ? { ...d, id: res.stop.id } : d
-                  ),
-                };
-              }
-              return t;
-            })
-          );
-        }
-      }).catch((err) => console.warn('Backend stop creation failed:', err.message));
-    }
-
-    showToast(`Added ${cityData.name} to itinerary.`, 'success');
-  };
-
-  const removeCityFromTrip = (tripId: string, cityId: string) => {
-    setTrips((prev) =>
-      prev.map((t) => {
-        if (t.id === tripId) {
-          return {
-            ...t,
-            destinations: t.destinations.filter((c) => c.id !== cityId)
-          };
-        }
-        return t;
-      })
-    );
-    showToast(`Removed city from itinerary.`, 'warning');
-  };
-
-  const addActivity = (tripId: string, cityId: string, activityData: Omit<Activity, 'id'>) => {
+  // ── Activity CRUD ──────────────────────────────────────────────────────────
+  const addActivity = useCallback((tripId: string, cityId: string, activityData: Omit<Activity, 'id'>) => {
     const activityId = `act-${Math.random().toString(36).substring(2, 9)}`;
-    const newActivity: Activity = {
-      ...activityData,
-      id: activityId
+    const newActivity: Activity = { ...activityData, id: activityId };
+
+    const CURRENCY_SYMBOLS: Record<string, string> = {
+      USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', INR: '₹',
     };
 
-    setTrips((prev) =>
-      prev.map((t) => {
-        if (t.id === tripId) {
-          const updatedDestinations = t.destinations.map((d) => {
-            if (d.id === cityId) {
-              return {
-                ...d,
-                activities: [...d.activities, newActivity].sort((a, b) => {
-                  if (a.date !== b.date) return a.date.localeCompare(b.date);
-                  return a.time.localeCompare(b.time);
-                })
-              };
-            }
-            return d;
+    setTrips(prev => prev.map(t => {
+      if (t.id !== tripId) return t;
+      const sym = CURRENCY_SYMBOLS[t.currency || 'USD'] || '$';
+      const updatedDestinations = t.destinations.map(d => {
+        if (d.id !== cityId) return d;
+        return {
+          ...d,
+          activities: [...d.activities, newActivity].sort((a, b) => {
+            const dc = a.date.localeCompare(b.date);
+            return dc !== 0 ? dc : a.time.localeCompare(b.time);
+          }),
+        };
+      });
+
+      // Check for budget breach after adding
+      const totalCost = updatedDestinations.reduce(
+        (sum, dest) => sum + dest.activities.reduce((s, act) => s + act.cost, 0), 0,
+      );
+
+      if (totalCost > t.budgetLimit) {
+        setTimeout(() => {
+          showToast(`⚠️ Budget exceeded! ${sym}${totalCost.toLocaleString()} vs limit ${sym}${t.budgetLimit.toLocaleString()}`, 'warning');
+          addNotification({
+            title: 'Budget exceeded',
+            body: `"${t.name}" is now ${sym}${(totalCost - t.budgetLimit).toLocaleString()} over budget.`,
+            type: 'budget',
+            actionView: 'trip-summary',
+            tripId: t.id,
           });
-          
-          const totalCost = updatedDestinations.reduce(
-            (sum, dest) => sum + dest.activities.reduce((s, act) => s + act.cost, 0),
-            0
-          );
+        }, 100);
+      } else if (totalCost / t.budgetLimit > 0.9) {
+        setTimeout(() => {
+          showToast(`📊 Heads up: 90% of budget used on "${t.name}"`, 'warning');
+        }, 100);
+      }
 
-          const currencySymbols: Record<string, string> = {
-            USD: '$',
-            EUR: '€',
-            GBP: '£',
-            JPY: '¥',
-            AUD: 'A$',
-            CAD: 'C$',
-            INR: '₹',
-          };
-          const symbol = currencySymbols[t.currency || 'USD'] || '$';
+      return { ...t, destinations: updatedDestinations };
+    }));
 
-          if (totalCost > t.budgetLimit) {
-            setTimeout(() => {
-              showToast(`Budget warning! Expenses (${symbol}${totalCost.toLocaleString()}) exceed your limit of ${symbol}${t.budgetLimit.toLocaleString()}!`, 'warning');
-            }, 100);
-          }
+    showToast(`✅ Added "${activityData.title}" to itinerary.`, 'success');
+  }, [showToast, addNotification]);
 
-          return {
-            ...t,
-            destinations: updatedDestinations
-          };
-        }
-        return t;
-      })
-    );
-    showToast(`Added activity: "${activityData.title}"`, 'success');
-  };
+  const removeActivity = useCallback((tripId: string, cityId: string, activityId: string) => {
+    setTrips(prev => prev.map(t => {
+      if (t.id !== tripId) return t;
+      return {
+        ...t,
+        destinations: t.destinations.map(d => {
+          if (d.id !== cityId) return d;
+          return { ...d, activities: d.activities.filter(a => a.id !== activityId) };
+        }),
+      };
+    }));
+    showToast('Activity removed from itinerary.', 'info');
+  }, [showToast]);
 
-  const removeActivity = (tripId: string, cityId: string, activityId: string) => {
-    setTrips((prev) =>
-      prev.map((t) => {
-        if (t.id === tripId) {
-          return {
-            ...t,
-            destinations: t.destinations.map((d) => {
-              if (d.id === cityId) {
-                return {
-                  ...d,
-                  activities: d.activities.filter((a) => a.id !== activityId)
-                };
-              }
-              return d;
-            })
-          };
-        }
-        return t;
-      })
-    );
-    showToast('Activity removed.', 'info');
-  };
-
-  const cloneTrip = (communityTrip: Trip) => {
+  // ── Community ──────────────────────────────────────────────────────────────
+  const cloneTrip = useCallback((communityTrip: Trip) => {
     const newId = `trip-${Math.random().toString(36).substring(2, 9)}`;
     const cloned: Trip = {
       ...communityTrip,
       id: newId,
-      name: `Cloned: ${communityTrip.name}`,
+      name: `Copy of ${communityTrip.name}`,
       isShared: false,
       likesCount: 0,
       commentsCount: 0,
-      collaborators: []
+      collaborators: [],
     };
-    
-    setTrips((prev) => [cloned, ...prev]);
+    setTrips(prev => [cloned, ...prev]);
     setActiveTripId(newId);
-    setCurrentView('dashboard');
-    showToast(`Successfully cloned "${communityTrip.name}" to your trips!`, 'success');
-  };
+    showToast(`🗂️ "${communityTrip.name}" copied to My Trips!`, 'success');
+    addNotification({
+      title: 'Trip copied',
+      body: `"${communityTrip.name}" has been copied to your trips as a draft.`,
+      type: 'trip',
+      actionView: 'my-trips',
+      tripId: newId,
+    });
+    setCurrentView('my-trips');
+  }, [showToast, addNotification]);
 
-  const likeCommunityPost = (postId: string) => {
-    // Optimistic toggle
-    setCommunityPosts((prev) =>
-      prev.map((post) => {
-        if (post.id === postId) {
-          const liked = (post as any).isLikedByMe;
-          return {
-            ...post,
-            isLikedByMe: !liked,
-            likesCount: liked ? post.likesCount - 1 : post.likesCount + 1,
-          };
-        }
-        return post;
-      })
-    );
+  const likeCommunityPost = useCallback((postId: string) => {
+    setCommunityPosts(prev => prev.map(post =>
+      post.id === postId ? { ...post, likesCount: post.likesCount + 1 } : post,
+    ));
+    showToast('❤️ Post liked!', 'success');
+  }, [showToast]);
 
-    // Sync with backend
-    if (getAuthToken()) {
-      const post = communityPosts.find((p) => p.id === postId);
-      const isCurrentlyLiked = (post as any)?.isLikedByMe;
-      const apiCall = isCurrentlyLiked
-        ? api.community.unlikePost(postId)
-        : api.community.likePost(postId);
-
-      apiCall.then((res) => {
-        // Sync exact count from server
-        setCommunityPosts((prev) =>
-          prev.map((p) =>
-            p.id === postId
-              ? { ...p, likesCount: res.likesCount, isLikedByMe: res.isLikedByMe }
-              : p
-          )
-        );
-      }).catch(() => {
-        // Revert optimistic update on error
-        setCommunityPosts((prev) =>
-          prev.map((p) => {
-            if (p.id === postId) {
-              const liked = (p as any).isLikedByMe;
-              return { ...p, isLikedByMe: !liked, likesCount: liked ? p.likesCount - 1 : p.likesCount + 1 };
-            }
-            return p;
-          })
-        );
-      });
-    }
-
-    showToast('Post liked!', 'success');
-  };
-
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <AppContext.Provider
-      value={{
-        currentView,
-        setCurrentView,
-        trips,
-        activeTripId,
-        setActiveTripId,
-        communityPosts,
-        communityLoading,
-        insights,
-        toasts,
-        showToast,
-        removeToast,
-        addTrip,
-        updateTrip,
-        deleteTrip,
-        addCityToTrip,
-        removeCityFromTrip,
-        addActivity,
-        removeActivity,
-        cloneTrip,
-        likeCommunityPost,
-        isAuthenticated,
-        setIsAuthenticated,
-        currentUser,
-        logoutUser
-      }}
-    >
+    <AppContext.Provider value={{
+      currentView, setCurrentView,
+      currentUser, updateUser,
+      isAuthenticated, setIsAuthenticated, loginUserDirectly, logoutUser,
+      trips, activeTripId, setActiveTripId,
+      addTrip, updateTrip, deleteTrip,
+      addCityToTrip, removeCityFromTrip,
+      addActivity, removeActivity,
+      cloneTrip,
+      communityPosts, sharedTripId, setSharedTripId,
+      likeCommunityPost,
+      insights,
+      notifications, unreadCount,
+      addNotification, markNotificationRead, markAllNotificationsRead, clearNotification,
+      toasts, showToast, removeToast,
+      isLoading, setIsLoading,
+    }}>
       {children}
     </AppContext.Provider>
   );
@@ -518,8 +428,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (context === undefined) throw new Error('useApp must be used within an AppProvider');
   return context;
 };

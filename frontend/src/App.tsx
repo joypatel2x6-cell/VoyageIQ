@@ -36,7 +36,19 @@ const AdminGate: React.FC<{ onExit: () => void }> = ({ onExit }) => {
 //  Main Application Layout
 // ─────────────────────────────────────────────────────────────────────────────
 const MainLayout: React.FC = () => {
-  const { currentView, isAuthenticated } = useApp();
+  const {
+    currentView,
+    setCurrentView,
+    isAuthenticated,
+    setIsAuthenticated,
+    activeTripId,
+    setActiveTripId,
+    sharedTripId,
+    setSharedTripId,
+    loginUserDirectly,
+    showToast
+  } = useApp();
+
   const [adminMode, setAdminMode] = useState(false);
 
   // Secret keyboard shortcut: Ctrl + Shift + A → opens Admin Panel
@@ -50,6 +62,125 @@ const MainLayout: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // ── Sync URL Address Bar with Current View (Simple SPA Router) ──
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      if (path === '/login' || path === '/register') {
+        setIsAuthenticated(false);
+      } else if (path.startsWith('/auth/google/callback')) {
+        // Handle Google Auth callback parameters
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const userStr = params.get('user');
+        const error = params.get('error');
+
+        if (token && userStr) {
+          try {
+            const parsedUser = JSON.parse(decodeURIComponent(userStr));
+            loginUserDirectly(token, parsedUser);
+            setCurrentView('dashboard');
+            showToast(`Signed in successfully with Google!`, 'success');
+          } catch (e) {
+            showToast('Failed to parse Google user session.', 'error');
+            setIsAuthenticated(false);
+            setCurrentView('dashboard');
+          }
+        } else if (error) {
+          showToast(decodeURIComponent(error), 'error');
+          setIsAuthenticated(false);
+          setCurrentView('dashboard');
+        } else {
+          setIsAuthenticated(false);
+          setCurrentView('dashboard');
+        }
+        window.history.replaceState(null, '', '/dashboard');
+      } else if (path === '/admin') {
+        setAdminMode(true);
+      } else if (path === '/explore') {
+        setCurrentView('explore');
+      } else if (path === '/community') {
+        setCurrentView('community');
+      } else if (path.startsWith('/community/trip/')) {
+        const id = path.replace('/community/trip/', '');
+        setSharedTripId(id);
+        setCurrentView('shared-trip');
+      } else if (path === '/profile') {
+        setCurrentView('profile');
+      } else if (path === '/calendar') {
+        setCurrentView('calendar');
+      } else if (path === '/trips') {
+        setCurrentView('my-trips');
+      } else if (path === '/trips/new') {
+        setActiveTripId(null);
+        setCurrentView('plan-trip');
+      } else if (path.startsWith('/trips/') && path.endsWith('/itinerary')) {
+        const id = path.replace('/trips/', '').replace('/itinerary', '');
+        setActiveTripId(id);
+        setCurrentView('plan-trip');
+      } else if (path.startsWith('/trips/') && path.endsWith('/budget')) {
+        const id = path.replace('/trips/', '').replace('/budget', '');
+        setActiveTripId(id);
+        setCurrentView('plan-trip');
+      } else if (path.startsWith('/trips/') && path.endsWith('/calendar')) {
+        const id = path.replace('/trips/', '').replace('/calendar', '');
+        setActiveTripId(id);
+        setCurrentView('calendar');
+      } else if (path.startsWith('/trips/') && path.endsWith('/overview')) {
+        const id = path.replace('/trips/', '').replace('/overview', '');
+        setActiveTripId(id);
+        setCurrentView('trip-summary');
+      } else if (path.startsWith('/trips/')) {
+        const id = path.replace('/trips/', '');
+        setActiveTripId(id);
+        setCurrentView('trip-summary');
+      } else if (path === '/activities') {
+        setCurrentView('things-to-do');
+      } else if (path === '/dashboard' || path === '/') {
+        setCurrentView('dashboard');
+      }
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    handleLocationChange();
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, [setIsAuthenticated, setCurrentView, setActiveTripId, setSharedTripId]);
+
+  // Sync URL when states change
+  useEffect(() => {
+    let path = '/dashboard';
+    if (adminMode) {
+      path = '/admin';
+    } else if (currentView === 'shared-trip') {
+      path = sharedTripId ? `/community/trip/${sharedTripId}` : '/shared-trip';
+    } else if (currentView === 'my-trips') {
+      path = '/trips';
+    } else if (currentView === 'plan-trip') {
+      path = activeTripId ? `/trips/${activeTripId}/itinerary` : '/trips/new';
+    } else if (currentView === 'trip-summary') {
+      path = activeTripId ? `/trips/${activeTripId}/overview` : '/trips';
+    } else if (currentView === 'calendar') {
+      path = '/calendar';
+    } else if (currentView === 'explore') {
+      path = '/explore';
+    } else if (currentView === 'things-to-do') {
+      path = '/activities';
+    } else if (currentView === 'community') {
+      path = '/community';
+    } else if (currentView === 'profile') {
+      path = '/profile';
+    } else if (!isAuthenticated) {
+      if (window.location.pathname.startsWith('/auth/google/callback')) {
+        return; // wait for callback parser to run first
+      }
+      path = (window.location.pathname === '/register') ? '/register' : '/login';
+    }
+
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+  }, [currentView, activeTripId, sharedTripId, adminMode, isAuthenticated]);
 
   // Admin panel takes over the entire viewport — completely isolated
   if (adminMode) {

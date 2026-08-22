@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Button } from '../components/ui/Button';
-import { api } from '../services/api';
 import {
   User, Mail, Phone, MapPin, Globe, Lock, Bell, Shield,
   Trash2, Camera, Check, ChevronDown, ChevronRight,
-  AlertTriangle, Eye, EyeOff, Languages, Bookmark,
+  Eye, EyeOff, Languages, Bookmark,
   LogOut, Save, X, Heart
 } from 'lucide-react';
 
@@ -72,68 +71,27 @@ const Field: React.FC<{
   </div>
 );
 
-// ── Delete Confirmation Dialog ─────────────────────────────────────────────────
-const DeleteDialog: React.FC<{ onConfirm: () => void; onCancel: () => void }> = ({ onConfirm, onCancel }) => (
-  <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(11,19,41,0.8)', backdropFilter: 'blur(8px)', zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }} onClick={onCancel}>
-    <div style={{ width: '100%', maxWidth: '400px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-xl)', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', boxShadow: '0 24px 64px rgba(0,0,0,0.5)', animation: 'modal-scale 0.22s cubic-bezier(0.34,1.56,0.64,1)' }} onClick={e => e.stopPropagation()}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
-        <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <AlertTriangle size={26} color="var(--color-error)" />
-        </div>
-        <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Delete Account?</h3>
-        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          This action is <strong>permanent and irreversible</strong>. All your trips, itineraries, and saved data will be permanently deleted.
-        </p>
-      </div>
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <Button variant="outline" onClick={onCancel} style={{ flex: 1 }}>Cancel</Button>
-        <button
-          onClick={onConfirm}
-          style={{ flex: 1, padding: '0.6rem', fontSize: '0.875rem', fontWeight: 700, borderRadius: 'var(--radius-md)', border: 'none', backgroundColor: 'var(--color-error)', color: '#fff', cursor: 'pointer' }}
-        >
-          Yes, Delete Account
-        </button>
-      </div>
-    </div>
-  </div>
-);
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 // ── Main Profile Page ──────────────────────────────────────────────────────────
+// ── Main Profile Page ──────────────────────────────────────────────────────────
 export const Profile: React.FC = () => {
-  const { showToast, logoutUser, setCurrentView, currentUser } = useApp();
+  const { showToast, logoutUser, setCurrentView, currentUser, updateUser } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Profile state — initialized from currentUser (populated after login)
-  const [avatar, setAvatar]     = useState(currentUser?.profileImage || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80');
-  const [firstName, setFirst]   = useState(currentUser?.firstName || '');
-  const [lastName, setLast]     = useState(currentUser?.lastName || '');
-  const [email, setEmail]       = useState(currentUser?.email || '');
-  const [phone, setPhone]       = useState(currentUser?.phone || '');
-  const [city, setCity]         = useState(currentUser?.city || '');
-  const [country, setCountry]   = useState(currentUser?.country || '');
-  const [bio, setBio]           = useState(currentUser?.bio || '');
-  const [language, setLanguage] = useState(currentUser?.language || 'English');
-  const [travelStyle, setStyle] = useState<TravelStyle>((currentUser?.travelStyle as TravelStyle) || 'Balanced');
-  const [prefs, setPrefs]       = useState<TravelPref[]>(currentUser?.preferences || []);
+  // Profile state
+  const [avatar, setAvatar]     = useState(currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80');
+  const [firstName, setFirst]   = useState(currentUser.firstName);
+  const [lastName, setLast]     = useState(currentUser.lastName);
+  const [email, setEmail]       = useState(currentUser.email);
+  const [phone, setPhone]       = useState(currentUser.phone);
+  const [city, setCity]         = useState(currentUser.city);
+  const [country, setCountry]   = useState(currentUser.country);
+  const [bio, setBio]           = useState('Passionate explorer chasing sunsets, street food, and hidden gems around the world. 🌍');
+  const [language, setLanguage] = useState(currentUser.language);
+  const [travelStyle, setStyle] = useState<TravelStyle>(currentUser.travelStyle as TravelStyle);
+  const [prefs, setPrefs]       = useState<TravelPref[]>(currentUser.preferences as TravelPref[]);
   const [savedDests, setSaved]  = useState(SAVED_DESTINATIONS);
-
-  // Sync profile state when currentUser loads (e.g. after token validation on refresh)
-  useEffect(() => {
-    if (currentUser) {
-      setAvatar(currentUser.profileImage || avatar);
-      setFirst(currentUser.firstName || '');
-      setLast(currentUser.lastName || '');
-      setEmail(currentUser.email || '');
-      setPhone(currentUser.phone || '');
-      setCity(currentUser.city || '');
-      setCountry(currentUser.country || '');
-      setBio(currentUser.bio || '');
-      setLanguage(currentUser.language || 'English');
-      setStyle((currentUser.travelStyle as TravelStyle) || 'Balanced');
-      setPrefs(currentUser.preferences || []);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -179,7 +137,9 @@ export const Profile: React.FC = () => {
     }
     const reader = new FileReader();
     reader.onload = ev => {
-      setAvatar(ev.target?.result as string);
+      const dataUrl = ev.target?.result as string;
+      setAvatar(dataUrl);
+      updateUser({ avatarUrl: dataUrl });
       showToast('Profile photo updated!', 'success');
     };
     reader.readAsDataURL(file);
@@ -195,7 +155,7 @@ export const Profile: React.FC = () => {
     return errs;
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const errs = validateProfile();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -204,26 +164,25 @@ export const Profile: React.FC = () => {
     }
     setErrors({});
     setSaving(true);
-    try {
-      await api.users.updateProfile({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        phone: phone.trim() || undefined,
-        city: city.trim() || undefined,
-        country: country.trim() || undefined,
-        bio: bio.trim() || undefined,
-        travelStyle,
+    setTimeout(() => {
+      updateUser({
+        firstName,
+        lastName,
+        email,
+        phone,
+        city,
+        country,
+        avatarUrl: avatar,
         preferences: prefs,
+        travelStyle,
+        language
       });
-      showToast('Profile saved successfully!', 'success');
-    } catch (err: any) {
-      showToast(err.message || 'Failed to save profile.', 'error');
-    } finally {
       setSaving(false);
-    }
+      showToast('Profile saved successfully!', 'success');
+    }, 1000);
   };
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
+  const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!currentPw) errs.currentPw = 'Current password is required';
@@ -231,28 +190,14 @@ export const Profile: React.FC = () => {
     if (newPw !== confirmPw) errs.confirmPw = 'Passwords do not match';
     if (Object.keys(errs).length > 0) { setPwErrors(errs); return; }
     setPwErrors({});
-    try {
-      await api.users.changePassword({
-        currentPassword: currentPw,
-        newPassword: newPw,
-        confirmPassword: confirmPw,
-      });
-      showToast('Password changed successfully!', 'success');
-      setCurrentPw(''); setNewPw(''); setConfirmPw('');
-      setPwSection(false);
-    } catch (err: any) {
-      showToast(err.message || 'Failed to change password.', 'error');
-    }
+    showToast('Password changed successfully!', 'success');
+    setCurrentPw(''); setNewPw(''); setConfirmPw('');
+    setPwSection(false);
   };
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = () => {
     setShowDelete(false);
-    try {
-      await api.users.deleteAccount();
-      showToast('Account deleted. Signing you out...', 'warning');
-    } catch {
-      showToast('Account deletion scheduled. You will be logged out.', 'warning');
-    }
+    showToast('Account deletion scheduled. You will be logged out.', 'warning');
     setTimeout(() => logoutUser(), 1500);
   };
 
@@ -595,7 +540,16 @@ export const Profile: React.FC = () => {
       </div>
 
       {/* Delete confirmation dialog */}
-      {showDelete && <DeleteDialog onConfirm={handleDeleteAccount} onCancel={() => setShowDelete(false)} />}
+      <ConfirmDialog
+        isOpen={showDelete}
+        title="Delete Account?"
+        message="This action is permanent and irreversible. All your trips, itineraries, and saved data will be permanently deleted."
+        confirmLabel="Yes, Delete Account"
+        cancelLabel="Cancel"
+        danger
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setShowDelete(false)}
+      />
 
     </div>
   );
