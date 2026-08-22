@@ -403,6 +403,15 @@ const likePost = async (postId, userId) => {
     where: { communityPostId: postId },
   });
 
+  if (post.userId !== userId) {
+    const { createNotification } = require('./notification.service');
+    await createNotification(post.userId, {
+      title: 'New Like on Your Post',
+      message: 'Someone liked your community post.',
+      type: 'COMMUNITY_INTERACTION',
+    });
+  }
+
   return {
     success: true,
     message: 'Post liked successfully',
@@ -501,6 +510,15 @@ const addComment = async (postId, userId, { content }) => {
       },
     },
   });
+
+  if (post.userId !== userId) {
+    const { createNotification } = require('./notification.service');
+    await createNotification(post.userId, {
+      title: 'New Comment on Your Post',
+      message: `${comment.user?.firstName || 'A user'} commented: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`,
+      type: 'COMMUNITY_INTERACTION',
+    });
+  }
 
   return comment;
 };

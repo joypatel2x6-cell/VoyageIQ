@@ -218,6 +218,36 @@ const getTripHealthScore = async (tripId, userId) => {
 };
 
 /**
+ * Helper to check budget threshold and create warning/exceeded notification
+ */
+const checkBudgetThresholdNotification = async (tripId, userId) => {
+  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+  if (!trip || !trip.budget || parseFloat(trip.budget.toString()) <= 0) return;
+
+  const totalBudget = parseFloat(trip.budget.toString());
+  const expenses = await prisma.expense.findMany({ where: { tripId } });
+  const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount.toString()), 0);
+
+  const percentageUsed = Math.round((totalExpenses / totalBudget) * 100);
+
+  const { createNotification } = require('./notification.service');
+
+  if (totalExpenses > totalBudget) {
+    await createNotification(userId, {
+      title: 'Budget Exceeded',
+      message: `Total expenses for "${trip.name}" (${totalExpenses} ${trip.currency}) have exceeded your budget of ${totalBudget} ${trip.currency}.`,
+      type: 'BUDGET_EXCEEDED',
+    });
+  } else if (percentageUsed >= 80) {
+    await createNotification(userId, {
+      title: 'Budget Warning',
+      message: `You have reached ${percentageUsed}% of your total budget for trip "${trip.name}".`,
+      type: 'BUDGET_WARNING',
+    });
+  }
+};
+
+/**
  * POST /api/v1/trips/:tripId/expenses
  * Add a manual expense line-item
  */
@@ -236,6 +266,8 @@ const addExpense = async (tripId, userId, payload) => {
       date: expenseDate,
     },
   });
+
+  await checkBudgetThresholdNotification(tripId, userId);
 
   return newExpense;
 };
@@ -265,6 +297,8 @@ const updateExpense = async (tripId, expenseId, userId, payload) => {
       ...(payload.date && { date: new Date(payload.date) }),
     },
   });
+
+  await checkBudgetThresholdNotification(tripId, userId);
 
   return updatedExpense;
 };
