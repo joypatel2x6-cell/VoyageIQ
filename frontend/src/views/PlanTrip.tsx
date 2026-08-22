@@ -8,9 +8,10 @@ import { DatePicker } from '../components/ui/DatePicker';
 import { TimelineItem } from '../components/TimelineItem';
 import { BudgetCard } from '../components/BudgetCard';
 import { BudgetProgress } from '../components/BudgetProgress';
-import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, PieChart, AlertTriangle, Users, Sparkles, Compass } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, PieChart, AlertTriangle, Users, Sparkles, Compass, Loader2 } from 'lucide-react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { SmartInsightCard } from '../components/SmartInsightCard';
+import { api } from '../services/api';
 
 const currencySymbols: Record<string, string> = {
   USD: '$',
@@ -52,6 +53,7 @@ export const PlanTrip: React.FC = () => {
   const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=600');
   const [initialDestination, setInitialDestination] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // City Add States
   const [selectedCitySearch, setSelectedCitySearch] = useState('');
@@ -105,6 +107,125 @@ export const PlanTrip: React.FC = () => {
       setFormErrors({});
     }
   }, [activeTripId, activeTrip]);
+
+  const handleGenerateAIItinerary = async () => {
+    const errors: Record<string, string> = {};
+    if (!startDate) errors.startDate = 'Start date is required';
+    if (!endDate) errors.endDate = 'End date is required';
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      errors.endDate = 'End date cannot be before start date';
+    }
+    if (!initialDestination.trim() && !tripName.trim()) {
+      errors.initialDestination = 'Destination or trip name is required for AI generation';
+    }
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      showToast('Please specify destination and travel dates for AI itinerary generation.', 'error');
+      return;
+    }
+
+    const targetDestination = initialDestination.trim() || tripName.trim();
+    setIsGeneratingAI(true);
+    showToast('✨ Asking OpenRouter AI to generate custom itinerary...', 'info');
+
+    try {
+      const res = await api.ai.generateItinerary({
+        destination: targetDestination,
+        startDate,
+        endDate,
+        budgetLimit: Number(budgetLimit),
+        currency,
+        travelStyle,
+        travelersCount,
+        tripName: tripName.trim() || `Journey to ${targetDestination}`,
+        notes: tripDesc,
+      });
+
+      if (!res.success || !res.data) {
+        throw new Error('AI itinerary response format invalid.');
+      }
+
+      const aiData = res.data;
+      const formattedName = tripName.trim() || aiData.tripName || `Trip to ${targetDestination}`;
+      const matchedDest = mockDestinations.find((d) => d.name.toLowerCase().includes(targetDestination.toLowerCase()));
+      const destImg = aiData.coverImage || matchedDest?.image || coverImage;
+
+      // Convert AI cities to destinations format
+      const formattedDestinations = (aiData.cities || []).map((city: any, cIdx: number) => ({
+        id: `city-ai-${Date.now()}-${cIdx}`,
+        name: city.name || targetDestination,
+        image: city.image || destImg,
+        arrivalDate: city.arrivalDate || startDate,
+        departureDate: city.departureDate || endDate,
+        activities: (city.activities || []).map((act: any, aIdx: number) => ({
+          id: `act-ai-${Date.now()}-${cIdx}-${aIdx}`,
+          title: act.title || 'Sightseeing',
+          date: act.date || startDate,
+          time: act.time || '10:00',
+          cost: Number(act.cost) || 0,
+          category: act.category || 'sightseeing',
+          location: act.location || '',
+          notes: act.notes || '',
+        })),
+      }));
+
+      if (formattedDestinations.length === 0) {
+        formattedDestinations.push({
+          id: `city-ai-${Date.now()}`,
+          name: targetDestination,
+          image: destImg,
+          arrivalDate: startDate,
+          departureDate: endDate,
+          activities: [],
+        });
+      }
+
+      if (activeTrip) {
+        updateTrip({
+          ...activeTrip,
+          name: formattedName,
+          description: aiData.summary || tripDesc,
+          startDate,
+          endDate,
+          budgetLimit: Number(budgetLimit),
+          travelersCount,
+          currency,
+          travelStyle,
+          coverImage: destImg,
+          destinations: formattedDestinations,
+        });
+      } else {
+        const newTripId = addTrip({
+          name: formattedName,
+          description: aiData.summary || tripDesc,
+          startDate,
+          endDate,
+          budgetLimit: Number(budgetLimit),
+          travelersCount,
+          currency,
+          travelStyle,
+          coverImage: destImg,
+          destinations: formattedDestinations,
+          collaborators: [],
+          isShared: false,
+        });
+
+        const created = trips.find((t) => t.id === newTripId);
+        if (created && created.destinations.length > 0) {
+          setActiveCityId(created.destinations[0].id);
+        }
+      }
+
+      showToast(`✨ AI Itinerary generated successfully for ${targetDestination}!`, 'success');
+      setStep(2);
+    } catch (err: any) {
+      console.error('AI generation error:', err);
+      showToast(err.message || 'AI itinerary generation failed. Check your OpenRouter key.', 'error');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
 
   const handleCreateOrUpdateTrip = () => {
     const errors: Record<string, string> = {};
@@ -463,13 +584,52 @@ export const PlanTrip: React.FC = () => {
 
           {/* Left Form Panel */}
           <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid var(--border-color-light)' }}>
-            <div>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                {activeTrip ? 'Edit Trip Settings' : 'Plan a New Trip'}
-              </h2>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-                Tell us a little about your journey and we'll help you organize the rest.
-              </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  {activeTrip ? 'Edit Trip Settings' : 'Plan a New Trip'}
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                  Tell us a little about your journey or let OpenRouter AI build it for you!
+                </p>
+              </div>
+
+              {/* AI Auto Plan Banner Card */}
+              <button
+                type="button"
+                onClick={handleGenerateAIItinerary}
+                disabled={isGeneratingAI}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  border: 'none',
+                  cursor: isGeneratingAI ? 'wait' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(168, 85, 247, 0.35)',
+                  transition: 'all 0.2s',
+                  opacity: isGeneratingAI ? 0.8 : 1,
+                }}
+                onMouseEnter={(e) => !isGeneratingAI && (e.currentTarget.style.transform = 'translateY(-1px)')}
+                onMouseLeave={(e) => !isGeneratingAI && (e.currentTarget.style.transform = 'translateY(0)')}
+              >
+                {isGeneratingAI ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Generating AI Itinerary...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    <span>Generate Itinerary with AI</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -697,7 +857,21 @@ export const PlanTrip: React.FC = () => {
               >
                 Cancel
               </Button>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGenerateAIItinerary}
+                  disabled={isGeneratingAI}
+                  leftIcon={isGeneratingAI ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  style={{
+                    borderColor: 'var(--color-primary)',
+                    color: 'var(--color-primary)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isGeneratingAI ? 'AI Working...' : '✨ Generate with AI'}
+                </Button>
                 {!activeTrip && (
                   <Button
                     variant="outline"

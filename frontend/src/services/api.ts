@@ -296,4 +296,23 @@ export const api = {
         method: 'DELETE',
       }),
   },
+
+  // AI Itinerary API (OpenRouter)
+  ai: {
+    generateItinerary: (params: {
+      destination: string;
+      startDate: string;
+      endDate: string;
+      budgetLimit?: number;
+      currency?: string;
+      travelStyle?: string;
+      travelersCount?: number;
+      tripName?: string;
+      notes?: string;
+    }) =>
+      request<{ success: boolean; data: any }>('/ai/generate-itinerary', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+  },
 };
