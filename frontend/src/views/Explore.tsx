@@ -222,7 +222,6 @@ export const Explore: React.FC = () => {
         currency: 'INR',
       });
       setActiveTripId(targetTripId);
-      setCurrentView('plan-trip');
     }
 
     // Add stop to trip
@@ -232,6 +231,10 @@ export const Explore: React.FC = () => {
       arrivalDate,
       departureDate,
     });
+
+    // Automatically navigate to Itinerary Builder to show reflection
+    setActiveTripId(targetTripId);
+    setCurrentView('plan-trip');
 
     // Close overlays & cleanup
     setSelectedDestForAdd(null);

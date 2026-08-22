@@ -8,7 +8,7 @@ type TravelPreference = 'Adventure' | 'Culture' | 'Food' | 'Nature' | 'Shopping'
 type TravelStyle = 'Budget' | 'Balanced' | 'Luxury';
 
 export const Login: React.FC = () => {
-  const { setIsAuthenticated, setCurrentView, showToast } = useApp();
+  const { setIsAuthenticated, setCurrentView, showToast, updateUser } = useApp();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   
   // Login Form States
@@ -124,6 +124,7 @@ export const Login: React.FC = () => {
       setIsLoading(false);
       setIsSuccess(true);
       setTimeout(() => {
+        updateUser({ email: loginEmail });
         setIsAuthenticated(true);
         setCurrentView('dashboard');
         showToast(`Welcome back! Ready for your next trip?`, 'success');
@@ -178,6 +179,17 @@ export const Login: React.FC = () => {
       setIsLoading(false);
       setIsSuccess(true);
       setTimeout(() => {
+        updateUser({
+          firstName,
+          lastName,
+          email: regEmail,
+          phone,
+          city,
+          country,
+          avatarUrl,
+          preferences: selectedPreferences,
+          travelStyle
+        });
         setIsAuthenticated(true);
         setCurrentView('dashboard');
         showToast(`Welcome to VoyageIQ, ${firstName}! Your account is ready.`, 'success');

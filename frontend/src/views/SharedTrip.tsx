@@ -495,8 +495,9 @@ const CityBlock: React.FC<{ dest: Trip['destinations'][0]; index: number; tripCu
 //  Main SharedTrip Page
 // ─────────────────────────────────────────────────────────────────────────────
 export const SharedTrip: React.FC = () => {
-  const { isAuthenticated, cloneTrip, showToast, setCurrentView, setIsAuthenticated } = useApp();
-  const trip = SHARED_TRIP;
+  const { isAuthenticated, cloneTrip, showToast, setCurrentView, setIsAuthenticated, sharedTripId, communityPosts } = useApp();
+  const selectedPost = communityPosts.find(p => p.trip.id === sharedTripId);
+  const trip = selectedPost ? selectedPost.trip : SHARED_TRIP;
 
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);

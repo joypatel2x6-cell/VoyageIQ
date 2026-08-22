@@ -335,7 +335,7 @@ const CommunityCard: React.FC<{
 
 // ── Main Community Page ────────────────────────────────────────────────────────
 export const Community: React.FC = () => {
-  const { communityPosts, cloneTrip, likeCommunityPost, showToast } = useApp();
+  const { communityPosts, cloneTrip, likeCommunityPost, showToast, setSharedTripId, setCurrentView } = useApp();
 
   // State
   const [searchTerm, setSearchTerm] = useState('');
@@ -561,7 +561,10 @@ export const Community: React.FC = () => {
               key={post.id}
               post={post}
               onLike={() => likeCommunityPost(post.id)}
-              onView={() => setViewPost(post)}
+              onView={() => {
+                setSharedTripId(post.trip.id);
+                setCurrentView('shared-trip');
+              }}
               onCopy={() => handleCopy(post)}
             />
           ))}

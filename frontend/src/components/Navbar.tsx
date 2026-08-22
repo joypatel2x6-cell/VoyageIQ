@@ -3,7 +3,16 @@ import { useApp, type ViewType } from '../context/AppContext';
 import { Compass, Search, Bell, LayoutDashboard, Map, CalendarPlus, Share2 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentView, setCurrentView, insights } = useApp();
+  const {
+    currentView,
+    setCurrentView,
+    notifications,
+    unreadCount,
+    markNotificationRead,
+    markAllNotificationsRead,
+    currentUser,
+    setActiveTripId
+  } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
 
   // Simple view mapper to get title
@@ -122,24 +131,35 @@ export const Navbar: React.FC = () => {
                 backgroundColor: showNotifications ? 'var(--bg-tertiary)' : 'transparent',
                 color: 'var(--text-secondary)',
                 transition: 'background-color 0.2s',
+                border: 'none',
+                cursor: 'pointer',
               }}
               onMouseEnter={(e) => !showNotifications && (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')}
               onMouseLeave={(e) => !showNotifications && (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <Bell size={20} />
-              {insights.length > 0 && (
+              {unreadCount > 0 && (
                 <span
                   style={{
                     position: 'absolute',
                     top: '2px',
                     right: '2px',
-                    width: '8px',
-                    height: '8px',
+                    minWidth: '16px',
+                    height: '16px',
                     borderRadius: '50%',
-                    backgroundColor: 'var(--color-warning)',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.625rem',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     border: '2px solid var(--bg-secondary)',
+                    padding: '0 2px',
                   }}
-                />
+                >
+                  {unreadCount}
+                </span>
               )}
             </button>
 
@@ -156,41 +176,76 @@ export const Navbar: React.FC = () => {
                   boxShadow: 'var(--shadow-xl)',
                   overflow: 'hidden',
                   zIndex: 200,
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color-light)',
                 }}
               >
                 <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Smart Insights</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{insights.length} alerts</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllNotificationsRead()}
+                      style={{ fontSize: '0.7rem', color: 'var(--color-primary)', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
                 </div>
                 <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                  {insights.map((ins) => (
-                    <div
-                      key={ins.id}
-                      style={{
-                        padding: '12px 16px',
-                        borderBottom: '1px solid var(--border-color-light)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: ins.type === 'budget' ? 'var(--color-error)' : ins.type === 'price' ? 'var(--color-success)' : 'var(--color-accent-warm)' }}>
-                          {ins.title}
-                        </span>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-light)' }}>Active</span>
-                      </div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                        {ins.message}
-                      </p>
+                  {notifications.length === 0 ? (
+                    <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      No notifications yet.
                     </div>
-                  ))}
+                  ) : (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => {
+                          markNotificationRead(notif.id);
+                          if (notif.actionView) {
+                            if (notif.tripId) {
+                              setActiveTripId(notif.tripId);
+                            }
+                            setCurrentView(notif.actionView);
+                          }
+                          setShowNotifications(false);
+                        }}
+                        style={{
+                          padding: '12px 16px',
+                          borderBottom: '1px solid var(--border-color-light)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px',
+                          cursor: 'pointer',
+                          backgroundColor: notif.read ? 'transparent' : 'rgba(99,102,241,0.06)',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.read ? 'transparent' : 'rgba(99,102,241,0.06)'}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            color: notif.type === 'budget' ? '#ef4444' : notif.type === 'trip' ? '#8b5cf6' : notif.type === 'community' ? '#10b981' : 'var(--text-primary)'
+                          }}>
+                            {notif.title}
+                          </span>
+                          {!notif.read && (
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4', margin: 0 }}>
+                          {notif.body}
+                        </p>
+                        <span style={{ fontSize: '0.625rem', color: 'var(--text-light)', marginTop: 2 }}>
+                          {new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div style={{ padding: '8px 16px', textAlign: 'center', backgroundColor: 'var(--bg-tertiary)' }}>
-                  <button onClick={() => setShowNotifications(false)} style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary)' }}>
+                <div style={{ padding: '8px 16px', textAlign: 'center', backgroundColor: 'var(--bg-tertiary)', borderTop: '1px solid var(--border-color-light)' }}>
+                  <button onClick={() => setShowNotifications(false)} style={{ fontSize: '0.75rem', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600, color: 'var(--color-primary)' }}>
                     Close Panel
                   </button>
                 </div>
@@ -199,17 +254,36 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* User profile image (mobile) */}
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-            alt="Ayush"
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-              cursor: 'pointer',
-            }}
-          />
+          <div onClick={() => setCurrentView('profile')} style={{ cursor: 'pointer', display: 'flex' }}>
+            {currentUser.avatarUrl ? (
+              <img
+                src={currentUser.avatarUrl}
+                alt="Profile"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '1.5px solid var(--color-primary)',
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-primary)',
+                color: '#fff',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {currentUser.firstName[0]}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
