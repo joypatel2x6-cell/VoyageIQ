@@ -5,6 +5,7 @@ import { Navbar } from './components/Navbar';
 import { ToastContainer } from './components/Toast';
 
 // Views
+import { Login } from './views/Login';
 import { Dashboard } from './views/Dashboard';
 import { MyTrips } from './views/MyTrips';
 import { PlanTrip } from './views/PlanTrip';
@@ -14,7 +15,16 @@ import { CalendarView } from './views/CalendarView';
 import { TripSummary } from './views/TripSummary';
 
 const MainLayout: React.FC = () => {
-  const { currentView } = useApp();
+  const { currentView, isAuthenticated } = useApp();
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Login />
+        <ToastContainer />
+      </>
+    );
+  }
 
   const renderActiveView = () => {
     switch (currentView) {

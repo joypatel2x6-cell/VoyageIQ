@@ -30,6 +30,9 @@ interface AppContextType {
   removeActivity: (tripId: string, cityId: string, activityId: string) => void;
   cloneTrip: (communityTrip: Trip) => void;
   likeCommunityPost: (postId: string) => void;
+  isAuthenticated: boolean;
+  setIsAuthenticated: (val: boolean) => void;
+  logoutUser: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -41,6 +44,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(mockCommunityPosts);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [insights] = useState(mockInsights);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const logoutUser = () => {
+    setIsAuthenticated(false);
+    setCurrentView('dashboard');
+    showToast('Successfully signed out.', 'info');
+  };
 
   // Auto-remove toasts after 3.5 seconds
   useEffect(() => {
@@ -249,7 +259,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addActivity,
         removeActivity,
         cloneTrip,
-        likeCommunityPost
+        likeCommunityPost,
+        isAuthenticated,
+        setIsAuthenticated,
+        logoutUser
       }}
     >
       {children}
