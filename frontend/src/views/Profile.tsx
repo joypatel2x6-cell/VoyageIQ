@@ -217,26 +217,55 @@ export const Profile: React.FC = () => {
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.04em' }}>PRO VOYAGER</span>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Button
-              variant="outline"
-              size="sm"
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
               onClick={() => setCurrentView('explore')}
-              style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff', backdropFilter: 'blur(6px)' }}
-              leftIcon={<Compass size={14} />}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                borderRadius: '12px',
+                fontSize: '0.825rem',
+                fontWeight: 700,
+                color: '#ffffff',
+                backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(8px)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              }}
             >
-              Explore Cities
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
+              <Compass size={15} color="#ffffff" />
+              <span>Explore Cities</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleSave}
               disabled={saving}
-              leftIcon={saving ? undefined : <Save size={14} />}
-              style={{ backgroundColor: '#ffffff', color: '#4f46e5', fontWeight: 800 }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 18px',
+                borderRadius: '12px',
+                fontSize: '0.825rem',
+                fontWeight: 800,
+                color: '#4f46e5',
+                backgroundColor: '#ffffff',
+                border: 'none',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.7 : 1,
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
+              }}
             >
-              {saving ? 'Saving...' : 'Save Profile'}
-            </Button>
+              <Save size={15} color="#4f46e5" />
+              <span>{saving ? 'Saving...' : 'Save Profile'}</span>
+            </button>
           </div>
         </div>
 
