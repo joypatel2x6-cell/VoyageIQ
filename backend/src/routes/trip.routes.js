@@ -1,6 +1,9 @@
 const express = require('express');
 const tripController = require('../controllers/trip.controller');
 const tripStopRoutes = require('./tripStop.routes');
+const budgetRoutes = require('./budget.routes');
+const expenseRoutes = require('./expense.routes');
+const calendarRoutes = require('./calendar.routes');
 const validate = require('../middleware/validate');
 const { requireAuth } = require('../middleware/auth.middleware');
 const {
@@ -15,8 +18,11 @@ const router = express.Router();
 // Require authentication for ALL trip endpoints
 router.use(requireAuth);
 
-// Mount trip stops sub-router
+// Mount trip sub-routers
 router.use('/:tripId/stops', tripStopRoutes);
+router.use('/:tripId/budget', budgetRoutes);
+router.use('/:tripId/expenses', expenseRoutes);
+router.use('/:tripId', calendarRoutes);
 
 /**
  * @route   POST /api/v1/trips

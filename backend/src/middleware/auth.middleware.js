@@ -55,6 +55,41 @@ const requireAuth = asyncHandler(async (req, res, next) => {
   next();
 });
 
+/**
+ * Optional Authentication Middleware: optionalAuth
+ * Attaches user to req.user if a valid Bearer JWT is provided, but does not block unauthenticated requests.
+ */
+const optionalAuth = asyncHandler(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret);
+    if (decoded && decoded.userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+      });
+      if (user) {
+        req.user = sanitizeUser(user);
+      }
+    }
+  } catch (err) {
+    req.user = null;
+  }
+
+  next();
+});
+
 module.exports = {
   requireAuth,
+  optionalAuth,
 };
