@@ -39,7 +39,7 @@ export const PlanTrip: React.FC = () => {
   } = useApp();
 
   const [step, setStep] = useState(1);
-  const activeTrip = trips.find((t) => t.id === activeTripId);
+  const activeTrip = trips.find((t) => t.id === activeTripId) || (activeTripId && trips.length > 0 ? trips[0] : undefined);
 
   // Form States
   const [tripName, setTripName] = useState('');
@@ -87,9 +87,17 @@ export const PlanTrip: React.FC = () => {
       setInitialDestination(activeTrip.destinations[0]?.name || '');
       setFormErrors({});
       
-      // Auto select first city for itinerary if available
-      if (activeTrip.destinations.length > 0 && !activeCityId) {
-        setActiveCityId(activeTrip.destinations[0].id);
+      // Auto select valid city for itinerary if available
+      if (activeTrip.destinations.length > 0) {
+        const cityExists = activeTrip.destinations.some((d) => d.id === activeCityId);
+        if (!cityExists) {
+          setActiveCityId(activeTrip.destinations[0].id);
+        }
+      }
+
+      // Auto jump to Step 2 if URL path is /itinerary
+      if (window.location.pathname.endsWith('/itinerary')) {
+        setStep(2);
       }
     } else {
       // Clear forms
@@ -210,14 +218,15 @@ export const PlanTrip: React.FC = () => {
           collaborators: [],
           isShared: false,
         });
+        setActiveTripId(newTripId);
+      }
 
-        const created = trips.find((t) => t.id === newTripId);
-        if (created && created.destinations.length > 0) {
-          setActiveCityId(created.destinations[0].id);
-        }
+      if (formattedDestinations.length > 0) {
+        setActiveCityId(formattedDestinations[0].id);
       }
 
       showToast(`✨ AI Itinerary generated successfully for ${targetDestination}!`, 'success');
+      setStep(2);
       setStep(2);
     } catch (err: any) {
       console.error('AI generation error:', err);
@@ -519,7 +528,7 @@ export const PlanTrip: React.FC = () => {
 
   const COLORS = ['#8b5cf6', '#06b6d4', '#f43f5e', '#10b981', '#ec4899', '#64748b', '#f97316', '#6d28d9'];
 
-  const selectedCityForItinerary = activeTrip?.destinations.find((d) => d.id === activeCityId);
+  const selectedCityForItinerary = activeTrip?.destinations.find((d) => d.id === activeCityId) || activeTrip?.destinations[0];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
