@@ -1,14 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Button } from '../components/ui/Button';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
   User, Mail, Phone, MapPin, Globe, Lock, Bell, Shield,
   Trash2, Camera, Check, ChevronDown, ChevronRight,
-  Eye, EyeOff, Languages, Bookmark,
-  LogOut, Save, X, Heart
+  Eye, EyeOff, Languages, Bookmark, Sparkles, Award,
+  Compass, Flame, Plane, Heart, Calendar, LogOut, Save, X,
+  CheckCircle2, AlertTriangle, ShieldCheck, Zap
 } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types & Mock Data ──────────────────────────────────────────────────────────
+type ProfileTab = 'personal' | 'preferences' | 'saved' | 'achievements' | 'security';
 type TravelPref = 'Adventure' | 'Culture' | 'Food & Dining' | 'Nature' | 'Shopping' | 'Luxury' | 'Budget Travel';
 type TravelStyle = 'Budget' | 'Balanced' | 'Luxury';
 
@@ -18,114 +21,70 @@ const PREF_ICONS: Record<TravelPref, string> = {
   Shopping: '🛍️', Luxury: '💎', 'Budget Travel': '💰',
 };
 const LANGUAGES = ['English', 'Hindi', 'French', 'Spanish', 'German', 'Japanese', 'Arabic', 'Portuguese', 'Italian'];
-const SAVED_DESTINATIONS = [
-  { name: 'Santorini, Greece', image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=400&auto=format&fit=crop' },
-  { name: 'Kyoto, Japan', image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=400&auto=format&fit=crop' },
-  { name: 'Amalfi Coast, Italy', image: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?q=80&w=400&auto=format&fit=crop' },
-  { name: 'Norwegian Fjords', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=400&auto=format&fit=crop' },
+
+const INITIAL_SAVED_DESTINATIONS = [
+  { id: '1', name: 'Santorini', country: 'Greece', image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=600&auto=format&fit=crop', category: 'Romantic & Scenic', rating: 4.9 },
+  { id: '2', name: 'Kyoto', country: 'Japan', image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=600&auto=format&fit=crop', category: 'Culture & Temples', rating: 4.8 },
+  { id: '3', name: 'Amalfi Coast', country: 'Italy', image: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?q=80&w=600&auto=format&fit=crop', category: 'Coastal Luxury', rating: 4.9 },
+  { id: '4', name: 'Norwegian Fjords', country: 'Norway', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=600&auto=format&fit=crop', category: 'Nature & Hiking', rating: 4.7 },
 ];
 
-// ── Helper: Section Card ───────────────────────────────────────────────────────
-const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
-  <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-color-light)', overflow: 'hidden' }}>
-    <div style={{ padding: '1.1rem 1.5rem', borderBottom: '1px solid var(--border-color-light)', display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ color: 'var(--color-primary)' }}>{icon}</span>
-      <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>{title}</h2>
-    </div>
-    <div style={{ padding: '1.5rem' }}>{children}</div>
-  </div>
-);
+const ACHIEVEMENTS = [
+  { id: '1', title: 'Globe Trotter', desc: 'Explored destinations in 3+ continents', icon: '🌍', progress: 100, unlocked: true },
+  { id: '2', title: 'Culture Vulture', desc: 'Added 15+ museum and heritage stops', icon: '🏛️', progress: 85, unlocked: true },
+  { id: '3', title: 'Budget Mastermind', desc: 'Saved 20%+ on trip itineraries using AI', icon: '⚡', progress: 100, unlocked: true },
+  { id: '4', title: 'Community Pioneer', desc: 'Shared 5 public trip plans with community', icon: '🌟', progress: 60, unlocked: false },
+];
 
-// ── Helper: Form Field ────────────────────────────────────────────────────────
-const Field: React.FC<{
-  label: string; value: string; onChange: (v: string) => void;
-  type?: string; placeholder?: string; error?: string; readOnly?: boolean;
-  suffix?: React.ReactNode;
-}> = ({ label, value, onChange, type = 'text', placeholder, error, readOnly, suffix }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-      {label}
-    </label>
-    <div style={{ position: 'relative' }}>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        style={{
-          width: '100%',
-          padding: suffix ? '0.6rem 2.8rem 0.6rem 0.875rem' : '0.6rem 0.875rem',
-          fontSize: '0.875rem',
-          borderRadius: 'var(--radius-md)',
-          border: `1px solid ${error ? 'var(--color-error)' : 'var(--border-color)'}`,
-          backgroundColor: readOnly ? 'var(--bg-tertiary)' : 'var(--bg-primary)',
-          color: readOnly ? 'var(--text-muted)' : 'var(--text-primary)',
-          outline: 'none',
-          boxSizing: 'border-box',
-        }}
-      />
-      {suffix && <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>{suffix}</div>}
-    </div>
-    {error && <span style={{ fontSize: '0.725rem', color: 'var(--color-error)', fontWeight: 600 }}>{error}</span>}
-  </div>
-);
-
-import { ConfirmDialog } from '../components/ConfirmDialog';
-
-// ── Main Profile Page ──────────────────────────────────────────────────────────
-// ── Main Profile Page ──────────────────────────────────────────────────────────
 export const Profile: React.FC = () => {
   const { showToast, logoutUser, setCurrentView, currentUser, updateUser } = useApp();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Profile state
-  const [avatar, setAvatar]     = useState(currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80');
-  const [firstName, setFirst]   = useState(currentUser.firstName);
-  const [lastName, setLast]     = useState(currentUser.lastName);
-  const [email, setEmail]       = useState(currentUser.email);
-  const [phone, setPhone]       = useState(currentUser.phone);
-  const [city, setCity]         = useState(currentUser.city);
-  const [country, setCountry]   = useState(currentUser.country);
-  const [bio, setBio]           = useState('Passionate explorer chasing sunsets, street food, and hidden gems around the world. 🌍');
-  const [language, setLanguage] = useState(currentUser.language);
-  const [travelStyle, setStyle] = useState<TravelStyle>(currentUser.travelStyle as TravelStyle);
-  const [prefs, setPrefs]       = useState<TravelPref[]>(currentUser.preferences as TravelPref[]);
-  const [savedDests, setSaved]  = useState(SAVED_DESTINATIONS);
+  // Active Tab
+  const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
 
-  // Validation errors
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Form State
+  const [avatar, setAvatar]     = useState(currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80');
+  const [firstName, setFirst]   = useState(currentUser.firstName || 'Ayush');
+  const [lastName, setLast]     = useState(currentUser.lastName || 'Patel');
+  const [email, setEmail]       = useState(currentUser.email || 'ayush@example.com');
+  const [phone, setPhone]       = useState(currentUser.phone || '+91 98765 43210');
+  const [city, setCity]         = useState(currentUser.city || 'Mumbai');
+  const [country, setCountry]   = useState(currentUser.country || 'India');
+  const [bio, setBio]           = useState('Passionate explorer chasing sunsets, street food, and hidden gems around the world. 🌍✨');
+  const [language, setLanguage] = useState(currentUser.language || 'English');
+  const [travelStyle, setStyle] = useState<TravelStyle>((currentUser.travelStyle as TravelStyle) || 'Balanced');
+  const [prefs, setPrefs]       = useState<TravelPref[]>((currentUser.preferences as TravelPref[]) || ['Adventure', 'Culture', 'Food & Dining']);
+  const [savedDests, setSaved]  = useState(INITIAL_SAVED_DESTINATIONS);
 
-  // Password change state
-  const [pwSection, setPwSection]   = useState(false);
-  const [currentPw, setCurrentPw]   = useState('');
-  const [newPw, setNewPw]           = useState('');
-  const [confirmPw, setConfirmPw]   = useState('');
-  const [showCur, setShowCur]       = useState(false);
-  const [showNew, setShowNew]       = useState(false);
-  const [showConf, setShowConf]     = useState(false);
-  const [pwErrors, setPwErrors]     = useState<Record<string, string>>({});
+  // Errors & Loading
+  const [errors, setErrors]     = useState<Record<string, string>>({});
+  const [saving, setSaving]     = useState(false);
 
-  // Notifications state
-  const [notifSection, setNotifSection] = useState(false);
+  // Security & Password State
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw]         = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [showCur, setShowCur]     = useState(false);
+  const [showNew, setShowNew]     = useState(false);
+  const [showConf, setShowConf]   = useState(false);
+  const [pwErrors, setPwErrors]   = useState<Record<string, string>>({});
+
+  // Notifications State
   const [notifEmail, setNotifEmail]     = useState(true);
   const [notifPush, setNotifPush]       = useState(true);
   const [notifTripReminders, setRemind] = useState(true);
-  const [notifCommunity, setComm]       = useState(false);
-  const [notifDeals, setDeals]          = useState(true);
+  const [notifCommunity, setComm]       = useState(true);
+  const [notifDeals, setDeals]          = useState(false);
 
-  // Privacy state
-  const [privSection, setPrivSection] = useState(false);
-  const [profilePublic, setPublic]    = useState(true);
-  const [showTrips, setShowTrips]     = useState(true);
+  // Privacy State
+  const [profilePublic, setPublic] = useState(true);
+  const [showTrips, setShowTrips]  = useState(true);
 
-  // Delete dialog
+  // Delete Dialog
   const [showDelete, setShowDelete] = useState(false);
 
-  // Saving state
-  const [saving, setSaving] = useState(false);
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // Handlers
   const handleAvatarClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,7 +95,7 @@ export const Profile: React.FC = () => {
       return;
     }
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
       setAvatar(dataUrl);
       updateUser({ avatarUrl: dataUrl });
@@ -151,7 +110,6 @@ export const Profile: React.FC = () => {
     if (!lastName.trim()) errs.lastName = 'Last name is required';
     if (!email.trim()) errs.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Enter a valid email address';
-    if (phone && !/^[\d\s()+-]{7,20}$/.test(phone)) errs.phone = 'Enter a valid phone number';
     return errs;
   };
 
@@ -159,7 +117,7 @@ export const Profile: React.FC = () => {
     const errs = validateProfile();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
-      showToast('Please fix the errors before saving.', 'error');
+      showToast('Please check the form for errors.', 'error');
       return;
     }
     setErrors({});
@@ -175,376 +133,659 @@ export const Profile: React.FC = () => {
         avatarUrl: avatar,
         preferences: prefs,
         travelStyle,
-        language
+        language,
       });
       setSaving(false);
-      showToast('Profile saved successfully!', 'success');
-    }, 1000);
+      showToast('Profile updated successfully!', 'success');
+    }, 800);
   };
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!currentPw) errs.currentPw = 'Current password is required';
-    if (!newPw || newPw.length < 6) errs.newPw = 'New password must be at least 6 characters';
+    if (!newPw || newPw.length < 6) errs.newPw = 'Must be at least 6 characters';
     if (newPw !== confirmPw) errs.confirmPw = 'Passwords do not match';
-    if (Object.keys(errs).length > 0) { setPwErrors(errs); return; }
+    if (Object.keys(errs).length > 0) {
+      setPwErrors(errs);
+      return;
+    }
     setPwErrors({});
-    showToast('Password changed successfully!', 'success');
+    showToast('Password updated successfully!', 'success');
     setCurrentPw(''); setNewPw(''); setConfirmPw('');
-    setPwSection(false);
   };
 
   const handleDeleteAccount = () => {
     setShowDelete(false);
-    showToast('Account deletion scheduled. You will be logged out.', 'warning');
+    showToast('Account scheduled for deletion. Logging out...', 'warning');
     setTimeout(() => logoutUser(), 1500);
   };
 
-  const togglePref = (p: TravelPref) =>
-    setPrefs(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+  const togglePref = (p: TravelPref) => {
+    setPrefs((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  };
 
-  const removeSaved = (name: string) =>
-    setSaved(prev => prev.filter(d => d.name !== name));
+  const removeSaved = (id: string) => {
+    setSaved((prev) => prev.filter((d) => d.id !== id));
+    showToast('Destination removed from wishlist', 'info');
+  };
 
-  // ── Password strength ────────────────────────────────────────────────────────
-  const pwStrength = (p: string) => {
+  // Password strength helper
+  const getPwStrength = (p: string) => {
     if (!p) return { pct: 0, label: '', color: 'transparent' };
     let s = 0;
-    if (p.length >= 6) s++; if (p.length >= 8) s++;
-    if (/[A-Z]/.test(p)) s++; if (/[0-9]/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++;
-    if (s <= 2) return { pct: 33, label: 'Weak', color: 'var(--color-error)' };
-    if (s <= 4) return { pct: 66, label: 'Fair', color: 'var(--color-warning)' };
-    return { pct: 100, label: 'Strong', color: 'var(--color-success)' };
+    if (p.length >= 6) s++;
+    if (p.length >= 8) s++;
+    if (/[A-Z]/.test(p)) s++;
+    if (/[0-9]/.test(p)) s++;
+    if (/[^A-Za-z0-9]/.test(p)) s++;
+    if (s <= 2) return { pct: 33, label: 'Weak', color: '#f87171' };
+    if (s <= 4) return { pct: 66, label: 'Medium', color: '#fbbf24' };
+    return { pct: 100, label: 'Strong', color: '#34d399' };
   };
-  const strength = pwStrength(newPw);
 
-  // ── Toggle switch component ──────────────────────────────────────────────────
-  const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: string; sub?: string }> = ({ on, onChange, label, sub }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 0', borderBottom: '1px solid var(--border-color-light)' }}>
-      <div>
-        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
-        {sub && <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>}
-      </div>
-      <button
-        onClick={() => onChange(!on)}
+  const pwStrength = getPwStrength(newPw);
+
+  return (
+    <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', paddingBottom: '3rem' }}>
+      
+      {/* ── 1. HERO PROFILE BANNER ── */}
+      <div
         style={{
-          width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-          backgroundColor: on ? 'var(--color-primary)' : 'var(--bg-tertiary)',
-          position: 'relative', transition: 'background-color 0.25s', flexShrink: 0,
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: '24px',
+          border: '1px solid var(--border-color-light)',
+          overflow: 'hidden',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+          position: 'relative',
         }}
       >
-        <span style={{
-          position: 'absolute', top: 3, left: on ? 23 : 3,
-          width: 18, height: 18, borderRadius: '50%', backgroundColor: '#fff',
-          transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
-        }} />
-      </button>
-    </div>
-  );
+        {/* Animated Banner Header */}
+        <div
+          style={{
+            height: '170px',
+            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #db2777 80%, #06b6d4 100%)',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            padding: '1.25rem 1.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', padding: '6px 14px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+            <Sparkles size={14} color="#f43f5e" />
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#ffffff', letterSpacing: '0.04em' }}>PRO VOYAGER</span>
+          </div>
 
-  // ── Collapsible account setting row ─────────────────────────────────────────
-  const AccRow: React.FC<{ icon: React.ReactNode; label: string; sub: string; open: boolean; onToggle: () => void; color?: string; children?: React.ReactNode }> = ({ icon, label, sub, open, onToggle, color = 'var(--color-primary)', children }) => (
-    <div style={{ border: '1px solid var(--border-color-light)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-      <button onClick={onToggle} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '1rem 1.25rem', border: 'none', backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
-        <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', backgroundColor: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <span style={{ color }}>{icon}</span>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>{label}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>{sub}</div>
-        </div>
-        {open ? <ChevronDown size={16} color="var(--text-muted)" /> : <ChevronRight size={16} color="var(--text-muted)" />}
-      </button>
-      {open && <div style={{ padding: '0 1.25rem 1.25rem', borderTop: '1px solid var(--border-color-light)' }}>{children}</div>}
-    </div>
-  );
-
-  // ── Render ───────────────────────────────────────────────────────────────────
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '860px', margin: '0 auto' }} className="animate-fade-in">
-
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 900 }}>My Profile</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Manage your personal information, preferences, and account settings.</p>
-        </div>
-        <Button variant="primary" onClick={handleSave} disabled={saving} leftIcon={saving ? undefined : <Save size={15} />}>
-          {saving ? 'Saving…' : 'Save Changes'}
-        </Button>
-      </div>
-
-      {/* ── Avatar + Hero card ───────────────────────────────────────────────── */}
-      <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border-color-light)', overflow: 'hidden' }}>
-        {/* Cover gradient */}
-        <div style={{ height: 130, background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 40%, #06b6d4 100%)', position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)' }} />
-        </div>
-
-        <div style={{ padding: '0 2rem 1.75rem', display: 'flex', gap: '1.5rem', alignItems: 'flex-end', marginTop: -52, flexWrap: 'wrap' }}>
-          {/* Avatar */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div style={{ width: 100, height: 100, borderRadius: '50%', border: '4px solid var(--bg-secondary)', overflow: 'hidden', backgroundColor: 'var(--bg-tertiary)' }}>
-              <img src={avatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-            <button
-              onClick={handleAvatarClick}
-              style={{ position: 'absolute', bottom: 4, right: 4, width: 28, height: 28, borderRadius: '50%', backgroundColor: 'var(--color-primary)', border: '2px solid var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
-              title="Change profile photo"
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentView('explore')}
+              style={{ backgroundColor: 'rgba(15, 23, 42, 0.5)', borderColor: 'rgba(255,255,255,0.3)', color: '#fff', backdropFilter: 'blur(6px)' }}
+              leftIcon={<Compass size={14} />}
             >
-              <Camera size={13} />
-            </button>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+              Explore Cities
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              leftIcon={saving ? undefined : <Save size={14} />}
+              style={{ backgroundColor: '#ffffff', color: '#4f46e5', fontWeight: 800 }}
+            >
+              {saving ? 'Saving...' : 'Save Profile'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Profile Details Container */}
+        <div style={{ padding: '0 2rem 2rem', marginTop: '-60px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.5rem' }}>
+            
+            {/* Avatar & Main Identity */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '50%',
+                    border: '5px solid var(--bg-secondary)',
+                    overflow: 'hidden',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    boxShadow: '0 12px 28px rgba(0, 0, 0, 0.35)',
+                    position: 'relative',
+                  }}
+                >
+                  <img src={avatar} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <button
+                  onClick={handleAvatarClick}
+                  title="Upload profile photo"
+                  style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '6px',
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '50%',
+                    backgroundColor: '#6366f1',
+                    color: '#ffffff',
+                    border: '3px solid var(--bg-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                >
+                  <Camera size={15} />
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
+                    {firstName} {lastName}
+                  </h1>
+                  <ShieldCheck size={22} color="#10b981" title="Verified Account" />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Mail size={13} /> {email}</span>
+                  {city && <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={13} /> {city}, {country}</span>}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10b981', fontWeight: 700 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                    Active Traveller
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stat Counters */}
+            <div style={{ display: 'flex', gap: '1.5rem', backgroundColor: 'var(--bg-tertiary)', padding: '0.85rem 1.5rem', borderRadius: '16px', border: '1px solid var(--border-color-light)' }}>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 900, color: 'var(--color-primary)' }}>14</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Trips Planned</span>
+              </div>
+              <div style={{ width: 1, backgroundColor: 'var(--border-color-light)' }} />
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 900, color: '#10b981' }}>{savedDests.length}</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Saved Cities</span>
+              </div>
+              <div style={{ width: 1, backgroundColor: 'var(--border-color-light)' }} />
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ display: 'block', fontSize: '1.25rem', fontWeight: 900, color: '#f59e0b' }}>8</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Countries</span>
+              </div>
+            </div>
+
           </div>
 
-          {/* Name + meta */}
-          <div style={{ flex: 1, paddingBottom: 4 }}>
-            <h2 style={{ margin: '0 0 4px', fontSize: '1.35rem', fontWeight: 800 }}>{firstName} {lastName}</h2>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Mail size={12} />{email}</span>
-              {city && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={12} />{city}, {country}</span>}
-              {phone && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Phone size={12} />{phone}</span>}
-            </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              {prefs.map(p => (
-                <span key={p} style={{ fontSize: '0.675rem', fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(99,102,241,0.12)', color: 'var(--color-primary)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                  {PREF_ICONS[p]} {p}
-                </span>
-              ))}
-            </div>
-          </div>
+          {/* Bio Snippet */}
+          <p style={{ marginTop: '1.25rem', fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: '750px', margin: '1.25rem 0 0 0' }}>
+            {bio}
+          </p>
+        </div>
 
-          {/* Quick actions */}
-          <div style={{ display: 'flex', gap: 8, paddingBottom: 4 }}>
-            <Button variant="outline" size="sm" leftIcon={<LogOut size={13} />} onClick={logoutUser}>Sign Out</Button>
-          </div>
+        {/* ── 2. INTERACTIVE TAB NAVIGATION BAR ── */}
+        <div style={{ display: 'flex', borderTop: '1px solid var(--border-color-light)', backgroundColor: 'var(--bg-primary)', overflowX: 'auto' }}>
+          {[
+            { id: 'personal', label: 'Personal Info', icon: <User size={16} /> },
+            { id: 'preferences', label: 'Travel Preferences', icon: <Heart size={16} /> },
+            { id: 'saved', label: 'Saved Wishlist (' + savedDests.length + ')', icon: <Bookmark size={16} /> },
+            { id: 'achievements', label: 'Badges & Stats', icon: <Award size={16} /> },
+            { id: 'security', label: 'Security & Account', icon: <Lock size={16} /> },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as ProfileTab)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '1rem 1.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: isActive ? 800 : 600,
+                  color: isActive ? 'var(--color-primary)' : 'var(--text-secondary)',
+                  backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? '3px solid var(--color-primary)' : '3px solid transparent',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Personal Info ────────────────────────────────────────────────────── */}
-      <Section title="Personal Information" icon={<User size={18} />}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
-          <Field label="First Name" value={firstName} onChange={setFirst} placeholder="Ayush" error={errors.firstName} />
-          <Field label="Last Name" value={lastName} onChange={setLast} placeholder="Patel" error={errors.lastName} />
-          <Field label="Email Address" value={email} onChange={setEmail} type="email" placeholder="you@email.com" error={errors.email} />
-          <Field label="Phone Number" value={phone} onChange={setPhone} type="tel" placeholder="+91 98765 43210" error={errors.phone} />
-          <Field label="City" value={city} onChange={setCity} placeholder="Mumbai" />
-          <Field label="Country" value={country} onChange={setCountry} placeholder="India" />
-        </div>
+      {/* ── 3. TAB CONTENT PANELS ── */}
 
-        {/* Bio */}
-        <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Short Bio</label>
-          <textarea
-            value={bio}
-            onChange={e => setBio(e.target.value)}
-            rows={2}
-            maxLength={180}
-            placeholder="Tell the community a bit about yourself..."
-            style={{ padding: '0.65rem 0.875rem', fontSize: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
-          />
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right' }}>{bio.length}/180</span>
-        </div>
-      </Section>
-
-      {/* ── Travel Preferences ───────────────────────────────────────────────── */}
-      <Section title="Travel Preferences" icon={<Heart size={18} />}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Travel style */}
+      {/* TAB 1: PERSONAL INFORMATION */}
+      {activeTab === 'personal' && (
+        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', padding: '2rem', border: '1px solid var(--border-color-light)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 10 }}>Travel Style</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {(['Budget', 'Balanced', 'Luxury'] as TravelStyle[]).map(s => (
-                <button key={s} onClick={() => setStyle(s)}
-                  style={{
-                    padding: '0.5rem 1.25rem', fontSize: '0.85rem', fontWeight: 700,
-                    borderRadius: 'var(--radius-full)', border: `2px solid ${s === travelStyle ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                    backgroundColor: s === travelStyle ? 'rgba(99,102,241,0.1)' : 'transparent',
-                    color: s === travelStyle ? 'var(--color-primary)' : 'var(--text-muted)',
-                    cursor: 'pointer', transition: 'all 0.2s',
-                  }}>
-                  {s === 'Budget' ? '💰' : s === 'Balanced' ? '⚖️' : '✨'} {s}
-                </button>
-              ))}
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Personal Information</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Manage your basic profile info and contact details.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>First Name</label>
+              <input
+                value={firstName}
+                onChange={(e) => setFirst(e.target.value)}
+                style={{ padding: '0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: errors.firstName ? '1px solid var(--color-error)' : '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+              />
+              {errors.firstName && <span style={{ fontSize: '0.7rem', color: 'var(--color-error)' }}>{errors.firstName}</span>}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Last Name</label>
+              <input
+                value={lastName}
+                onChange={(e) => setLast(e.target.value)}
+                style={{ padding: '0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: errors.lastName ? '1px solid var(--color-error)' : '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+              />
+              {errors.lastName && <span style={{ fontSize: '0.7rem', color: 'var(--color-error)' }}>{errors.lastName}</span>}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{ padding: '0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: errors.email ? '1px solid var(--color-error)' : '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+              />
+              {errors.email && <span style={{ fontSize: '0.7rem', color: 'var(--color-error)' }}>{errors.email}</span>}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Phone Number</label>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+                style={{ padding: '0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>City</label>
+              <input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Mumbai"
+                style={{ padding: '0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Country</label>
+              <input
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                placeholder="India"
+                style={{ padding: '0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+              />
             </div>
           </div>
 
-          {/* Interest tiles */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Bio & Travel Persona</label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={3}
+              maxLength={200}
+              placeholder="Tell the VoyageIQ community about yourself..."
+              style={{ padding: '0.75rem', fontSize: '0.875rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none', resize: 'none' }}
+            />
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textAlign: 'right' }}>{bio.length}/200</span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <Button variant="primary" onClick={handleSave} disabled={saving} leftIcon={<Save size={15} />}>
+              {saving ? 'Saving...' : 'Save Personal Info'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: TRAVEL PREFERENCES */}
+      {activeTab === 'preferences' && (
+        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', padding: '2rem', border: '1px solid var(--border-color-light)', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 10 }}>Interests</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              {PREFS.map(p => {
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Travel Style & Interests</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>VoyageIQ AI uses these preferences to tailor personalized itinerary suggestions.</p>
+          </div>
+
+          {/* Travel Style Selector */}
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>Budget & Travel Style</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+              {[
+                { type: 'Budget', icon: '💰', title: 'Budget Explorer', desc: 'Hostels, local transport, street food' },
+                { type: 'Balanced', icon: '⚖️', title: 'Balanced Traveller', desc: 'Boutique stays, mixed dining, top sights' },
+                { type: 'Luxury', icon: '💎', title: 'Luxury Voyager', desc: '5-star hotels, private tours, fine dining' },
+              ].map((style) => {
+                const active = travelStyle === style.type;
+                return (
+                  <div
+                    key={style.type}
+                    onClick={() => setStyle(style.type as TravelStyle)}
+                    style={{
+                      padding: '1.25rem',
+                      borderRadius: '16px',
+                      border: active ? '2px solid var(--color-primary)' : '1px solid var(--border-color-light)',
+                      backgroundColor: active ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-primary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '1.5rem' }}>{style.icon}</span>
+                      {active && <CheckCircle2 size={18} color="var(--color-primary)" />}
+                    </div>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: active ? 'var(--color-primary)' : 'var(--text-primary)' }}>{style.title}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{style.desc}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Interests Tiles */}
+          <div>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>Activity Interests</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              {PREFS.map((p) => {
                 const active = prefs.includes(p);
                 return (
-                  <button key={p} onClick={() => togglePref(p)}
+                  <button
+                    key={p}
+                    onClick={() => togglePref(p)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '0.5rem 1rem', fontSize: '0.825rem', fontWeight: 700,
-                      borderRadius: 'var(--radius-full)',
-                      border: `2px solid ${active ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                      backgroundColor: active ? 'rgba(99,102,241,0.1)' : 'transparent',
-                      color: active ? 'var(--color-primary)' : 'var(--text-muted)',
-                      cursor: 'pointer', transition: 'all 0.2s',
-                    }}>
-                    {active && <Check size={12} />}
-                    {PREF_ICONS[p]} {p}
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '0.65rem 1.25rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      borderRadius: '25px',
+                      border: active ? '2px solid var(--color-primary)' : '1px solid var(--border-color)',
+                      backgroundColor: active ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-primary)',
+                      color: active ? 'var(--color-primary)' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{PREF_ICONS[p]}</span>
+                    <span>{p}</span>
+                    {active && <Check size={14} color="var(--color-primary)" />}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Language */}
+          {/* Language Selector */}
           <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: 8 }}>
-              <Languages size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-              Preferred Language
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+              Preferred App & Guide Language
             </label>
-            <div style={{ position: 'relative', maxWidth: 260 }}>
-              <select value={language} onChange={e => setLanguage(e.target.value)}
-                style={{ width: '100%', padding: '0.6rem 2.2rem 0.6rem 0.875rem', fontSize: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none', appearance: 'none' }}>
-                {LANGUAGES.map(l => <option key={l} value={l}>{l}</option>)}
+            <div style={{ position: 'relative', maxWidth: '300px' }}>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                style={{ width: '100%', padding: '0.65rem 2.25rem 0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none', appearance: 'none' }}
+              >
+                {LANGUAGES.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
               </select>
               <ChevronDown size={14} color="var(--text-muted)" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             </div>
           </div>
         </div>
-      </Section>
+      )}
 
-      {/* ── Saved Destinations ───────────────────────────────────────────────── */}
-      <Section title="Saved Destinations" icon={<Bookmark size={18} />}>
-        {savedDests.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-            <Globe size={32} color="var(--text-light)" style={{ marginBottom: 8 }} />
-            <p style={{ margin: 0, fontSize: '0.875rem' }}>No saved destinations yet. Explore to save cities.</p>
+      {/* TAB 3: SAVED DESTINATIONS */}
+      {activeTab === 'saved' && (
+        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', padding: '2rem', border: '1px solid var(--border-color-light)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Saved Wishlist Destinations</h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Cities and regions you saved for future travel planning.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setCurrentView('explore')} leftIcon={<Compass size={14} />}>
+              Discover Cities
+            </Button>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-            {savedDests.map(d => (
-              <div key={d.name} style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', height: 110, cursor: 'pointer' }}
-                className="card-hover">
-                <img src={d.image} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(11,19,41,0.8))' }} />
-                <div style={{ position: 'absolute', bottom: 8, left: 10, right: 30, color: '#fff', fontSize: '0.775rem', fontWeight: 700, lineHeight: 1.3 }}>{d.name}</div>
-                <button
-                  onClick={() => removeSaved(d.name)}
-                  style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', backgroundColor: 'rgba(11,19,41,0.6)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Remove"
+
+          {savedDests.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+              <Bookmark size={40} color="var(--text-muted)" style={{ marginBottom: '12px' }} />
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>Your wishlist is empty</h4>
+              <p style={{ margin: '6px 0 1rem 0', fontSize: '0.85rem' }}>Explore world destinations and click the bookmark button to save them here.</p>
+              <Button variant="primary" onClick={() => setCurrentView('explore')}>Explore Cities</Button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem' }}>
+              {savedDests.map((dest) => (
+                <div
+                  key={dest.id}
+                  style={{
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--border-color-light)',
+                    backgroundColor: 'var(--bg-primary)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    position: 'relative',
+                  }}
                 >
-                  <X size={12} />
-                </button>
+                  <div style={{ height: '130px', position: 'relative' }}>
+                    <img src={dest.image} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button
+                      onClick={() => removeSaved(dest.id)}
+                      title="Remove from wishlist"
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                        border: 'none',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <X size={14} />
+                    </button>
+                    <span style={{ position: 'absolute', bottom: '8px', left: '8px', fontSize: '0.675rem', fontWeight: 800, backgroundColor: 'rgba(99, 102, 241, 0.9)', color: '#fff', padding: '2px 8px', borderRadius: '10px' }}>
+                      ⭐ {dest.rating}
+                    </span>
+                  </div>
+                  <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>{dest.name}, {dest.country}</h4>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{dest.category}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 4: ACHIEVEMENTS & STATS */}
+      {activeTab === 'achievements' && (
+        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', padding: '2rem', border: '1px solid var(--border-color-light)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Travel Badges & Milestones</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '4px 0 0' }}>Unlock achievements as you plan, save, and explore with VoyageIQ.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+            {ACHIEVEMENTS.map((ach) => (
+              <div
+                key={ach.id}
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  borderRadius: '16px',
+                  padding: '1.25rem',
+                  border: ach.unlocked ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-color-light)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  opacity: ach.unlocked ? 1 : 0.75,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '2rem' }}>{ach.icon}</span>
+                  <span
+                    style={{
+                      fontSize: '0.675rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      backgroundColor: ach.unlocked ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-tertiary)',
+                      color: ach.unlocked ? '#10b981' : 'var(--text-muted)',
+                    }}
+                  >
+                    {ach.unlocked ? 'UNLOCKED' : 'IN PROGRESS'}
+                  </span>
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>{ach.title}</h4>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{ach.desc}</p>
+                </div>
+                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                    <span>Progress</span>
+                    <span>{ach.progress}%</span>
+                  </div>
+                  <div style={{ height: '6px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: ach.progress + '%', backgroundColor: ach.unlocked ? '#10b981' : 'var(--color-primary)', borderRadius: '10px' }} />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
-        )}
-      </Section>
+        </div>
+      )}
 
-      {/* ── Account Settings ─────────────────────────────────────────────────── */}
-      <Section title="Account Settings" icon={<Shield size={18} />}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* TAB 5: SECURITY & ACCOUNT */}
+      {activeTab === 'security' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Change Password Card */}
+          <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '20px', padding: '2rem', border: '1px solid var(--border-color-light)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Lock size={18} color="var(--color-primary)" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>Change Password</h3>
+            </div>
 
-          {/* Change Password */}
-          <AccRow
-            icon={<Lock size={17} />} label="Change Password" open={pwSection} onToggle={() => setPwSection(v => !v)}
-            sub="Update your account password" color="#8b5cf6"
-          >
-            <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-              {[
-                { label: 'Current Password', val: currentPw, set: setCurrentPw, show: showCur, toggle: () => setShowCur(v => !v), err: pwErrors.currentPw },
-                { label: 'New Password', val: newPw, set: setNewPw, show: showNew, toggle: () => setShowNew(v => !v), err: pwErrors.newPw },
-                { label: 'Confirm New Password', val: confirmPw, set: setConfirmPw, show: showConf, toggle: () => setShowConf(v => !v), err: pwErrors.confirmPw },
-              ].map(f => (
-                <div key={f.label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{f.label}</label>
-                  <div style={{ position: 'relative' }}>
-                    <input type={f.show ? 'text' : 'password'} value={f.val} onChange={e => f.set(e.target.value)}
-                      style={{ width: '100%', padding: '0.6rem 2.8rem 0.6rem 0.875rem', fontSize: '0.875rem', borderRadius: 'var(--radius-md)', border: `1px solid ${f.err ? 'var(--color-error)' : 'var(--border-color)'}`, backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
-                    <button type="button" onClick={f.toggle} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', border: 'none', backgroundColor: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                      {f.show ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                  {f.err && <span style={{ fontSize: '0.725rem', color: 'var(--color-error)', fontWeight: 600 }}>{f.err}</span>}
+            <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '500px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Current Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showCur ? 'text' : 'password'}
+                    value={currentPw}
+                    onChange={(e) => setCurrentPw(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem 2.5rem 0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: pwErrors.currentPw ? '1px solid var(--color-error)' : '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                  <button type="button" onClick={() => setShowCur(!showCur)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    {showCur ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
-              ))}
+                {pwErrors.currentPw && <span style={{ fontSize: '0.7rem', color: 'var(--color-error)' }}>{pwErrors.currentPw}</span>}
+              </div>
 
-              {/* Strength bar */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>New Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showNew ? 'text' : 'password'}
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem 2.5rem 0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: pwErrors.newPw ? '1px solid var(--color-error)' : '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                  <button type="button" onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {pwErrors.newPw && <span style={{ fontSize: '0.7rem', color: 'var(--color-error)' }}>{pwErrors.newPw}</span>}
+              </div>
+
+              {/* Password strength bar */}
               {newPw && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ height: 4, backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${strength.pct}%`, backgroundColor: strength.color, borderRadius: 'var(--radius-full)', transition: 'all 0.3s' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: pwStrength.pct + '%', backgroundColor: pwStrength.color, transition: 'all 0.3s' }} />
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: strength.color, fontWeight: 700 }}>{strength.label}</span>
+                  <span style={{ fontSize: '0.7rem', color: pwStrength.color, fontWeight: 700 }}>Strength: {pwStrength.label}</span>
                 </div>
               )}
 
-              <Button variant="primary" size="sm" type="submit" style={{ alignSelf: 'flex-end' }}>Update Password</Button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>Confirm New Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showConf ? 'text' : 'password'}
+                    value={confirmPw}
+                    onChange={(e) => setConfirmPw(e.target.value)}
+                    style={{ width: '100%', padding: '0.65rem 2.5rem 0.65rem 0.85rem', fontSize: '0.875rem', borderRadius: '10px', border: pwErrors.confirmPw ? '1px solid var(--color-error)' : '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
+                  />
+                  <button type="button" onClick={() => setShowConf(!showConf)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    {showConf ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {pwErrors.confirmPw && <span style={{ fontSize: '0.7rem', color: 'var(--color-error)' }}>{pwErrors.confirmPw}</span>}
+              </div>
+
+              <Button type="submit" variant="primary" style={{ alignSelf: 'flex-start', marginTop: '6px' }}>Update Password</Button>
             </form>
-          </AccRow>
+          </div>
 
-          {/* Notifications */}
-          <AccRow
-            icon={<Bell size={17} />} label="Notification Preferences" open={notifSection} onToggle={() => setNotifSection(v => !v)}
-            sub="Manage how VoyageIQ contacts you" color="#06b6d4"
-          >
-            <div style={{ marginTop: '0.75rem' }}>
-              <Toggle on={notifEmail} onChange={setNotifEmail} label="Email Notifications" sub="Receive updates and summaries via email" />
-              <Toggle on={notifPush} onChange={setNotifPush} label="Push Notifications" sub="Browser push alerts for real-time updates" />
-              <Toggle on={notifTripReminders} onChange={setRemind} label="Trip Reminders" sub="Alerts before your upcoming trips" />
-              <Toggle on={notifCommunity} onChange={setComm} label="Community Activity" sub="Likes and comments on your shared itineraries" />
-              <Toggle on={notifDeals} onChange={setDeals} label="Travel Deals & Offers" sub="Curated deals matching your travel style" />
+          {/* Delete Danger Zone */}
+          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: '20px', padding: '1.75rem', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#f87171' }}>Delete Account</h4>
+              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Permanently remove your profile, trips, and saved preferences.</p>
             </div>
-          </AccRow>
-
-          {/* Privacy */}
-          <AccRow
-            icon={<Globe size={17} />} label="Privacy Settings" open={privSection} onToggle={() => setPrivSection(v => !v)}
-            sub="Control your public profile visibility" color="#10b981"
-          >
-            <div style={{ marginTop: '0.75rem' }}>
-              <Toggle on={profilePublic} onChange={setPublic} label="Public Profile" sub="Allow other travellers to discover your profile" />
-              <Toggle on={showTrips} onChange={setShowTrips} label="Show My Trips Publicly" sub="Display shared trips in Community feed" />
-            </div>
-          </AccRow>
-
-          {/* Delete Account */}
-          <div style={{ border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-lg)', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', backgroundColor: 'rgba(239,68,68,0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', backgroundColor: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Trash2 size={17} color="var(--color-error)" />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-error)' }}>Delete Account</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Permanently delete your account and all associated data</div>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowDelete(true)}
-              style={{ padding: '0.5rem 1.1rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-error)', backgroundColor: 'transparent', color: 'var(--color-error)', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
-              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-error)'; e.currentTarget.style.color = '#fff'; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-error)'; }}
-            >
-              Delete Account
-            </button>
+            <Button variant="danger" onClick={() => setShowDelete(true)}>Delete Account</Button>
           </div>
 
         </div>
-      </Section>
+      )}
 
-      {/* ── Bottom Save bar ───────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', paddingBottom: '2rem' }}>
-        <Button variant="outline" onClick={() => setCurrentView('dashboard')}>Discard Changes</Button>
-        <Button variant="primary" onClick={handleSave} disabled={saving} leftIcon={saving ? undefined : <Save size={15} />}>
-          {saving ? 'Saving…' : 'Save Changes'}
-        </Button>
-      </div>
-
-      {/* Delete confirmation dialog */}
+      {/* Delete Confirmation Modal */}
       <ConfirmDialog
         isOpen={showDelete}
-        title="Delete Account?"
-        message="This action is permanent and irreversible. All your trips, itineraries, and saved data will be permanently deleted."
-        confirmLabel="Yes, Delete Account"
+        title="Delete VoyageIQ Account?"
+        message="Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your saved trips."
+        confirmLabel="Yes, Delete Permanently"
         cancelLabel="Cancel"
         danger
         onConfirm={handleDeleteAccount}
