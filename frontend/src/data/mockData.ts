@@ -33,6 +33,10 @@ export interface Trip {
     name: string;
     avatar: string;
   }[];
+  travelStyle?: 'Budget' | 'Balanced' | 'Luxury';
+  currency?: string;
+  travelersCount?: number;
+  coverImage?: string;
 }
 
 export interface DestinationSuggestion {

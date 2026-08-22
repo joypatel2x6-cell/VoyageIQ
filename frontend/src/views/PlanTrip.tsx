@@ -8,8 +8,17 @@ import { DatePicker } from '../components/ui/DatePicker';
 import { TimelineItem } from '../components/TimelineItem';
 import { BudgetCard } from '../components/BudgetCard';
 import { BudgetProgress } from '../components/BudgetProgress';
-import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, Trash2, PieChart, AlertTriangle } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, Trash2, PieChart, AlertTriangle, Users, Sparkles } from 'lucide-react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
+
+const currencySymbols: Record<string, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  AUD: 'A$',
+  CAD: 'C$',
+};
 
 export const PlanTrip: React.FC = () => {
   const {
@@ -35,6 +44,12 @@ export const PlanTrip: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [budgetLimit, setBudgetLimit] = useState(2000);
+  const [travelersCount, setTravelersCount] = useState(1);
+  const [currency, setCurrency] = useState('USD');
+  const [travelStyle, setTravelStyle] = useState<'Budget' | 'Balanced' | 'Luxury'>('Balanced');
+  const [coverImage, setCoverImage] = useState('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=600');
+  const [initialDestination, setInitialDestination] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // City Add States
   const [selectedCitySearch, setSelectedCitySearch] = useState('');
@@ -60,6 +75,12 @@ export const PlanTrip: React.FC = () => {
       setStartDate(activeTrip.startDate);
       setEndDate(activeTrip.endDate);
       setBudgetLimit(activeTrip.budgetLimit);
+      setTravelersCount(activeTrip.travelersCount || 1);
+      setCurrency(activeTrip.currency || 'USD');
+      setTravelStyle(activeTrip.travelStyle || 'Balanced');
+      setCoverImage(activeTrip.coverImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=600');
+      setInitialDestination(activeTrip.destinations[0]?.name || '');
+      setFormErrors({});
       
       // Auto select first city for itinerary if available
       if (activeTrip.destinations.length > 0 && !activeCityId) {
@@ -72,23 +93,39 @@ export const PlanTrip: React.FC = () => {
       setStartDate('');
       setEndDate('');
       setBudgetLimit(2000);
+      setTravelersCount(1);
+      setCurrency('USD');
+      setTravelStyle('Balanced');
+      setCoverImage('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=600');
+      setInitialDestination('');
       setActiveCityId('');
+      setFormErrors({});
     }
   }, [activeTripId, activeTrip]);
 
   const handleCreateOrUpdateTrip = () => {
-    if (!tripName.trim()) {
-      showToast('Trip name is required!', 'error');
+    const errors: Record<string, string> = {};
+    if (!tripName.trim()) errors.tripName = 'Trip name is required';
+    if (!startDate) errors.startDate = 'Start date is required';
+    if (!endDate) errors.endDate = 'End date is required';
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      errors.endDate = 'End date cannot be before start date';
+    }
+    if (travelersCount < 1) errors.travelersCount = 'Travelers must be at least 1';
+    if (budgetLimit < 0) errors.budgetLimit = 'Budget cannot be negative';
+    if (!initialDestination.trim()) errors.initialDestination = 'Initial destination is required';
+
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      showToast('Please fix required validation fields to create a trip.', 'error');
       return;
     }
-    if (!startDate || !endDate) {
-      showToast('Start and end dates are required!', 'error');
-      return;
-    }
-    if (new Date(startDate) > new Date(endDate)) {
-      showToast('Start date cannot be after end date!', 'error');
-      return;
-    }
+
+    const matchedDest = mockDestinations.find(
+      (d) => d.name.toLowerCase().includes(initialDestination.toLowerCase())
+    );
+    const destImg = matchedDest?.image || coverImage;
 
     if (activeTrip) {
       // Update
@@ -99,22 +136,81 @@ export const PlanTrip: React.FC = () => {
         startDate,
         endDate,
         budgetLimit: Number(budgetLimit),
+        travelersCount,
+        currency,
+        travelStyle,
+        coverImage: destImg,
       });
-      setStep(2);
+      setStep(3); // Navigate to Itinerary Builder
     } else {
       // Create New
-      addTrip({
+      const newTripId = addTrip({
         name: tripName,
         description: tripDesc,
         startDate,
         endDate,
         budgetLimit: Number(budgetLimit),
-        destinations: [],
+        travelersCount,
+        currency,
+        travelStyle,
+        coverImage: destImg,
+        destinations: [
+          {
+            id: `city-${Math.random().toString(36).substring(2, 9)}`,
+            name: initialDestination,
+            image: destImg,
+            arrivalDate: startDate,
+            departureDate: endDate,
+            activities: [],
+          }
+        ],
         collaborators: [],
         isShared: false,
       });
-      setStep(2);
+      
+      const createdTrip = trips.find(t => t.id === newTripId);
+      if (createdTrip && createdTrip.destinations.length > 0) {
+        setActiveCityId(createdTrip.destinations[0].id);
+      }
+      setStep(3); // Navigate to Itinerary Builder
     }
+  };
+
+  const handleSaveDraft = () => {
+    if (!tripName.trim()) {
+      showToast('Trip name is required to save a draft.', 'error');
+      return;
+    }
+    const matchedDest = mockDestinations.find(
+      (d) => d.name.toLowerCase().includes(initialDestination.toLowerCase())
+    );
+    const destImg = matchedDest?.image || coverImage;
+
+    addTrip({
+      name: `${tripName} (Draft)`,
+      description: tripDesc,
+      startDate: startDate || new Date().toISOString().split('T')[0],
+      endDate: endDate || new Date().toISOString().split('T')[0],
+      budgetLimit: Number(budgetLimit),
+      travelersCount,
+      currency,
+      travelStyle,
+      coverImage: destImg,
+      destinations: initialDestination ? [
+        {
+          id: `city-${Math.random().toString(36).substring(2, 9)}`,
+          name: initialDestination,
+          image: destImg,
+          arrivalDate: startDate || new Date().toISOString().split('T')[0],
+          departureDate: endDate || new Date().toISOString().split('T')[0],
+          activities: [],
+        }
+      ] : [],
+      collaborators: [],
+      isShared: false,
+    });
+
+    setCurrentView('my-trips');
   };
 
   const handleAddCity = () => {
@@ -221,6 +317,18 @@ export const PlanTrip: React.FC = () => {
 
   const { total: totalSpent, categories: spentByCategory } = getBudgetStats();
 
+  const getDurationInDays = () => {
+    if (!startDate || !endDate) return null;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+    const diffTime = end.getTime() - start.getTime();
+    if (diffTime < 0) return null;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  };
+  const duration = getDurationInDays();
+
   // Recharts Chart Config
   const chartData = Object.entries(spentByCategory).map(([key, val]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
@@ -270,34 +378,198 @@ export const PlanTrip: React.FC = () => {
 
       {/* STEP 1: CONFIGURE TRIP */}
       {step === 1 && (
-        <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>1. Trip Core Settings</h2>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }} className="form-grid">
-            <style>{`
-              @media (min-width: 768px) {
-                .form-grid {
-                  grid-template-columns: 2fr 1fr !important;
-                }
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }} className="plan-setup-grid animate-fade-in">
+          <style>{`
+            .plan-setup-grid {
+              grid-template-columns: 1fr;
+            }
+            @media (min-width: 1024px) {
+              .plan-setup-grid {
+                grid-template-columns: 1.8fr 1.2fr !important;
               }
-            `}</style>
-            
+            }
+            .image-picker-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 10px;
+            }
+            @media (max-width: 480px) {
+              .image-picker-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+              }
+            }
+          `}</style>
+
+          {/* Left Form Panel */}
+          <div className="glass-panel" style={{ padding: '2rem', borderRadius: 'var(--radius-xl)', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid var(--border-color-light)' }}>
+            <div>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                {activeTrip ? 'Edit Trip Settings' : 'Plan a New Trip'}
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+                Tell us a little about your journey and we'll help you organize the rest.
+              </p>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              
+              {/* Row 1: Trip Name */}
               <Input
                 label="Trip Name"
-                placeholder="e.g. Cherry Blossoms in Tokyo"
+                placeholder="e.g. European Summer Adventure"
                 value={tripName}
                 onChange={(e) => setTripName(e.target.value)}
+                error={formErrors.tripName}
+                required
               />
+
+              {/* Row 2: Date Pickers */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="form-row-dates">
+                <DatePicker
+                  label="Start Date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  error={formErrors.startDate}
+                  required
+                />
+                <DatePicker
+                  label="End Date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  error={formErrors.endDate}
+                  required
+                />
+              </div>
+
+              {/* Row 3: Travelers & Budget */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="form-row-details">
+                <Input
+                  label="Number of Travelers"
+                  type="number"
+                  min="1"
+                  value={travelersCount}
+                  onChange={(e) => setTravelersCount(Number(e.target.value))}
+                  error={formErrors.travelersCount}
+                  required
+                  leftIcon={<Users size={15} />}
+                />
+                <Input
+                  label={`Total Budget (${currency})`}
+                  type="number"
+                  min="0"
+                  value={budgetLimit}
+                  onChange={(e) => setBudgetLimit(Number(e.target.value))}
+                  error={formErrors.budgetLimit}
+                  required
+                  leftIcon={<DollarSign size={15} />}
+                />
+              </div>
+
+              {/* Row 4: Currency & Initial Destination */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="form-row-geo">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.9rem',
+                      fontSize: '0.925rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      outline: 'none',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      height: '42px',
+                    }}
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="JPY">JPY (¥)</option>
+                    <option value="AUD">AUD (A$)</option>
+                    <option value="CAD">CAD (C$)</option>
+                  </select>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Initial Destination</label>
+                  <select
+                    value={initialDestination}
+                    onChange={(e) => {
+                      setInitialDestination(e.target.value);
+                      const match = mockDestinations.find(d => d.name === e.target.value);
+                      if (match) setCoverImage(match.image);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.9rem',
+                      fontSize: '0.925rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      outline: 'none',
+                      backgroundColor: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      height: '42px',
+                    }}
+                  >
+                    <option value="">-- Select Destination --</option>
+                    {mockDestinations.map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                    <option value="Paris, France">Paris, France</option>
+                    <option value="London, UK">London, UK</option>
+                    <option value="New York, USA">New York, USA</option>
+                  </select>
+                  {formErrors.initialDestination && (
+                    <span style={{ fontSize: '0.725rem', color: 'var(--color-error)', fontWeight: 600, marginTop: '2px' }}>
+                      {formErrors.initialDestination}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 5: Travel Style */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Travel Style</label>
+                <div style={{ display: 'flex', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden', width: 'fit-content' }}>
+                  {(['Budget', 'Balanced', 'Luxury'] as const).map((styleOpt) => {
+                    const isActive = travelStyle === styleOpt;
+                    return (
+                      <button
+                        key={styleOpt}
+                        type="button"
+                        onClick={() => setTravelStyle(styleOpt)}
+                        style={{
+                          padding: '0.5rem 1.25rem',
+                          fontSize: '0.825rem',
+                          fontWeight: 600,
+                          border: 'none',
+                          backgroundColor: isActive ? 'var(--color-primary)' : 'var(--bg-secondary)',
+                          color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s',
+                          borderRight: styleOpt !== 'Luxury' ? '1px solid var(--border-color)' : 'none',
+                        }}
+                      >
+                        {styleOpt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Row 6: Description */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Trip Description</label>
                 <textarea
-                  placeholder="Enter notes about who you're traveling with, flight references..."
+                  placeholder="Summarize your itinerary objectives, hotel confirmations..."
                   value={tripDesc}
                   onChange={(e) => setTripDesc(e.target.value)}
                   style={{
                     width: '100%',
-                    minHeight: '100px',
+                    minHeight: '80px',
                     padding: '0.6rem 0.9rem',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border-color)',
@@ -305,39 +577,197 @@ export const PlanTrip: React.FC = () => {
                     outline: 'none',
                     resize: 'vertical',
                     fontFamily: 'inherit',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
                   }}
                   onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
                   onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
                 />
               </div>
+
+              {/* Row 7: Cover Image Select */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Cover Image Suggestion
+                </label>
+                
+                <div className="image-picker-grid">
+                  {[
+                    { name: 'Nature Peak', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400' },
+                    { name: 'Ocean Shore', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
+                    { name: 'Tokyo City', url: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400' },
+                    { name: 'Amalfi Coast', url: 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=400' }
+                  ].map((imgOpt) => {
+                    const isSelected = coverImage.split('?')[0] === imgOpt.url.split('?')[0];
+                    return (
+                      <div
+                        key={imgOpt.name}
+                        onClick={() => setCoverImage(imgOpt.url)}
+                        style={{
+                          height: '56px',
+                          borderRadius: 'var(--radius-md)',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          border: isSelected ? '3px solid var(--color-primary)' : '1px solid var(--border-color)',
+                          boxShadow: isSelected ? 'var(--shadow-md)' : 'none',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <img src={imgOpt.url} alt={imgOpt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', backgroundColor: 'rgba(15,23,42,0.6)', padding: '2px 4px', fontSize: '0.6rem', color: '#ffffff', textAlign: 'center', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                          {imgOpt.name}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <DatePicker
-                label="Start Date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-              <DatePicker
-                label="End Date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-              <Input
-                label="Total Budget Limit ($)"
-                type="number"
-                value={budgetLimit}
-                onChange={(e) => setBudgetLimit(Number(e.target.value))}
-                leftIcon={<DollarSign size={15} />}
-              />
+            {/* Actions Footer */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', borderTop: '1px solid var(--border-color-light)', paddingTop: '1rem' }}>
+              <Button
+                variant="ghost"
+                onClick={() => setCurrentView('dashboard')}
+                style={{ color: 'var(--text-muted)' }}
+              >
+                Cancel
+              </Button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {!activeTrip && (
+                  <Button
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                  >
+                    Save Draft
+                  </Button>
+                )}
+                <Button
+                  onClick={handleCreateOrUpdateTrip}
+                  rightIcon={<ArrowRight size={18} />}
+                >
+                  {activeTrip ? 'Update Trip Settings' : 'Create Trip'}
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <Button onClick={handleCreateOrUpdateTrip} rightIcon={<ArrowRight size={18} />}>
-              Save & Continue
-            </Button>
+          {/* Right Live Summary Panel */}
+          <div
+            style={{
+              position: 'sticky',
+              top: '80px',
+              height: 'fit-content',
+            }}
+          >
+            <div
+              className="glass-panel"
+              style={{
+                borderRadius: 'var(--radius-xl)',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color-light)',
+                boxShadow: 'var(--shadow-md)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {/* Header Visual Cover */}
+              <div style={{ height: '150px', position: 'relative' }}>
+                <img
+                  src={coverImage}
+                  alt="Summary Preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.6))' }} />
+                
+                <div style={{ position: 'absolute', bottom: '12px', left: '16px', color: '#ffffff' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-secondary)' }}>
+                    Live Preview
+                  </span>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '260px' }}>
+                    {tripName.trim() || 'My Journey Destination'}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Attributes Details body */}
+              <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  
+                  {/* Duration */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', display: 'flex' }}>
+                      <Calendar size={14} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-light)', fontWeight: 600 }}>DURATION</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {duration ? `${duration} Days` : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Travelers */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-primary-hover)', display: 'flex' }}>
+                      <Users size={14} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-light)', fontWeight: 600 }}>TRAVELERS</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {travelersCount > 0 ? `${travelersCount} Traveler${travelersCount > 1 ? 's' : ''}` : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Budget */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)', display: 'flex' }}>
+                      <DollarSign size={14} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-light)', fontWeight: 600 }}>TOTAL BUDGET</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {budgetLimit >= 0 ? `${currencySymbols[currency] || '$'}${budgetLimit.toLocaleString()}` : '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Style */}
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ padding: '6px', borderRadius: '50%', backgroundColor: 'var(--color-accent-warm-light)', color: 'var(--color-accent-warm)', display: 'flex' }}>
+                      <Sparkles size={14} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-light)', fontWeight: 600 }}>BUDGET STYLE</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {travelStyle}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stops */}
+                <div style={{ borderTop: '1px solid var(--border-color-light)', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-light)', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Initial Destination Stops
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ padding: '4px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)', display: 'flex' }}>
+                      <MapPin size={10} />
+                    </div>
+                    <span style={{ fontSize: '0.825rem', fontWeight: 700, color: initialDestination ? 'var(--text-primary)' : 'var(--text-light)' }}>
+                      {initialDestination || 'Not specified yet'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
         </div>
       )}
 
