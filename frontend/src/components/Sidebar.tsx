@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp, type ViewType } from '../context/AppContext';
-import { LayoutDashboard, Map, CalendarPlus, Compass, Share2, Calendar, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Map, CalendarPlus, Compass, Share2, Calendar, Sparkles, UserCircle2 } from 'lucide-react';
 
 interface NavItem {
   view: ViewType;
@@ -19,6 +19,7 @@ export const Sidebar: React.FC = () => {
     { view: 'things-to-do', label: 'Things to Do', icon: <Sparkles size={20} /> },
     { view: 'community', label: 'Community', icon: <Share2 size={20} /> },
     { view: 'calendar', label: 'Calendar', icon: <Calendar size={20} /> },
+    { view: 'profile', label: 'My Profile', icon: <UserCircle2 size={20} /> },
   ];
 
   const sidebarStyle: React.CSSProperties = {
@@ -139,13 +140,19 @@ export const Sidebar: React.FC = () => {
 
       {/* User Footer Profile */}
       <div
+        onClick={() => setCurrentView('profile')}
         style={{
           padding: '1.25rem 1.5rem',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s',
         }}
+        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'}
+        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+        title="Go to My Profile"
       >
         <img
           src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"

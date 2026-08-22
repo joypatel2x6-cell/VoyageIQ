@@ -14,6 +14,7 @@ import { Community } from './views/Community';
 import { CalendarView } from './views/CalendarView';
 import { TripSummary } from './views/TripSummary';
 import { ThingsToDo } from './views/ThingsToDo';
+import { Profile } from './views/Profile';
 
 const MainLayout: React.FC = () => {
   const { currentView, isAuthenticated } = useApp();
@@ -43,6 +44,8 @@ const MainLayout: React.FC = () => {
         return <TripSummary />;
       case 'things-to-do':
         return <ThingsToDo />;
+      case 'profile':
+        return <Profile />;
       case 'dashboard':
       default:
         return <Dashboard />;
