@@ -44,7 +44,9 @@ const MainLayout: React.FC = () => {
     activeTripId,
     setActiveTripId,
     sharedTripId,
-    setSharedTripId
+    setSharedTripId,
+    loginUserDirectly,
+    showToast
   } = useApp();
 
   const [adminMode, setAdminMode] = useState(false);
@@ -67,6 +69,33 @@ const MainLayout: React.FC = () => {
       const path = window.location.pathname;
       if (path === '/login') {
         setIsAuthenticated(false);
+      } else if (path.startsWith('/auth/google/callback')) {
+        // Handle Google Auth callback parameters
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        const userStr = params.get('user');
+        const error = params.get('error');
+
+        if (token && userStr) {
+          try {
+            const parsedUser = JSON.parse(decodeURIComponent(userStr));
+            loginUserDirectly(token, parsedUser);
+            setCurrentView('dashboard');
+            showToast(`Signed in successfully with Google!`, 'success');
+          } catch (e) {
+            showToast('Failed to parse Google user session.', 'error');
+            setIsAuthenticated(false);
+            setCurrentView('dashboard');
+          }
+        } else if (error) {
+          showToast(decodeURIComponent(error), 'error');
+          setIsAuthenticated(false);
+          setCurrentView('dashboard');
+        } else {
+          setIsAuthenticated(false);
+          setCurrentView('dashboard');
+        }
+        window.history.replaceState(null, '', '/dashboard');
       } else if (path === '/admin') {
         setAdminMode(true);
       } else if (path === '/explore') {
@@ -136,6 +165,9 @@ const MainLayout: React.FC = () => {
     } else if (currentView === 'profile') {
       path = '/profile';
     } else if (!isAuthenticated) {
+      if (window.location.pathname.startsWith('/auth/google/callback')) {
+        return; // wait for callback parser to run first
+      }
       path = '/login';
     }
 

@@ -53,6 +53,7 @@ interface AppContextType {
   updateUser: (updates: Partial<CurrentUser>) => void;
   isAuthenticated: boolean;
   setIsAuthenticated: (val: boolean) => void;
+  loginUserDirectly: (token: string, user: CurrentUser) => void;
   logoutUser: () => void;
 
   // Trips
@@ -167,6 +168,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // ── Auto-login on mount if token is saved ───────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem('voyageiq_token');
+    const storedUser = localStorage.getItem('voyageiq_user');
+    if (token && storedUser) {
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+        setIsAuthenticated(true);
+      } catch (e) {
+        localStorage.removeItem('voyageiq_token');
+        localStorage.removeItem('voyageiq_user');
+      }
+    }
+  }, []);
+
   // ── Auto-remove toasts after 3.5s ─────────────────────────────────────────
   useEffect(() => {
     if (toasts.length > 0) {
@@ -210,10 +226,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── User helpers ───────────────────────────────────────────────────────────
   const updateUser = useCallback((updates: Partial<CurrentUser>) => {
-    setCurrentUser(prev => ({ ...prev, ...updates }));
+    setCurrentUser(prev => {
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('voyageiq_user', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const loginUserDirectly = useCallback((token: string, user: CurrentUser) => {
+    localStorage.setItem('voyageiq_token', token);
+    localStorage.setItem('voyageiq_user', JSON.stringify(user));
+    setCurrentUser(user);
+    setIsAuthenticated(true);
   }, []);
 
   const logoutUser = useCallback(() => {
+    localStorage.removeItem('voyageiq_token');
+    localStorage.removeItem('voyageiq_user');
     setIsAuthenticated(false);
     setCurrentView('dashboard');
     showToast('Successfully signed out. See you next adventure! ✈️', 'info');
@@ -378,7 +407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentView, setCurrentView,
       currentUser, updateUser,
-      isAuthenticated, setIsAuthenticated, logoutUser,
+      isAuthenticated, setIsAuthenticated, loginUserDirectly, logoutUser,
       trips, activeTripId, setActiveTripId,
       addTrip, updateTrip, deleteTrip,
       addCityToTrip, removeCityFromTrip,

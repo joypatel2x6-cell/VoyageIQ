@@ -8,7 +8,7 @@ type TravelPreference = 'Adventure' | 'Culture' | 'Food' | 'Nature' | 'Shopping'
 type TravelStyle = 'Budget' | 'Balanced' | 'Luxury';
 
 export const Login: React.FC = () => {
-  const { setIsAuthenticated, setCurrentView, showToast, updateUser } = useApp();
+  const { setCurrentView, showToast, loginUserDirectly } = useApp();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   
   // Login Form States
@@ -41,6 +41,17 @@ export const Login: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
+
+  const handleGoogleLogin = () => {
+    if (isLoadingGoogle) return;
+    setIsLoadingGoogle(true);
+    showToast('Connecting to Google...', 'info');
+
+    // Dynamically query API origin or fallback
+    const apiOrigin = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    window.location.href = `${apiOrigin}/api/v1/auth/google`;
+  };
 
   // Registration Validation Errors
   const [regErrors, setRegErrors] = useState<Record<string, string>>({});
@@ -124,8 +135,21 @@ export const Login: React.FC = () => {
       setIsLoading(false);
       setIsSuccess(true);
       setTimeout(() => {
-        updateUser({ email: loginEmail });
-        setIsAuthenticated(true);
+        const mockUser = {
+          id: 'user-1',
+          firstName: loginEmail.split('@')[0],
+          lastName: 'Patel',
+          email: loginEmail,
+          phone: '+91 98765 43210',
+          city: 'Mumbai',
+          country: 'India',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+          preferences: ['Adventure', 'Culture', 'Food'] as TravelPreference[],
+          travelStyle: 'Balanced' as TravelStyle,
+          language: 'English',
+          joinedAt: '2025-01-15',
+        };
+        loginUserDirectly('mock_token_' + Date.now(), mockUser);
         setCurrentView('dashboard');
         showToast(`Welcome back! Ready for your next trip?`, 'success');
       }, 500);
@@ -179,18 +203,21 @@ export const Login: React.FC = () => {
       setIsLoading(false);
       setIsSuccess(true);
       setTimeout(() => {
-        updateUser({
+        const registeredUser = {
+          id: 'user-' + Math.random().toString(36).substring(2, 7),
           firstName,
           lastName,
           email: regEmail,
           phone,
           city,
           country,
-          avatarUrl,
+          avatarUrl: avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
           preferences: selectedPreferences,
-          travelStyle
-        });
-        setIsAuthenticated(true);
+          travelStyle,
+          language: 'English',
+          joinedAt: new Date().toISOString().split('T')[0]
+        };
+        loginUserDirectly('mock_token_' + Date.now(), registeredUser);
         setCurrentView('dashboard');
         showToast(`Welcome to VoyageIQ, ${firstName}! Your account is ready.`, 'success');
       }, 500);
@@ -719,7 +746,8 @@ export const Login: React.FC = () => {
 
           {/* Social Sign-In */}
           <button
-            onClick={() => { showToast('Redirecting to Google auth...', 'info'); }}
+            onClick={handleGoogleLogin}
+            disabled={isLoadingGoogle}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -732,11 +760,12 @@ export const Login: React.FC = () => {
               fontSize: '0.85rem',
               fontWeight: 600,
               color: 'var(--text-secondary)',
-              cursor: 'pointer',
+              cursor: isLoadingGoogle ? 'not-allowed' : 'pointer',
               transition: 'background-color 0.2s',
+              opacity: isLoadingGoogle ? 0.7 : 1,
             }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            onMouseEnter={(e) => !isLoadingGoogle && (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')}
+            onMouseLeave={(e) => !isLoadingGoogle && (e.currentTarget.style.backgroundColor = 'transparent')}
           >
             <svg width="16" height="16" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
               <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.47h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.91c1.7-1.56 2.69-3.86 2.69-6.6z" />
@@ -744,7 +773,7 @@ export const Login: React.FC = () => {
               <path fill="#FBBC05" d="M3.97 10.7a5.4 5.4 0 0 1 0-3.4V4.97H.95a9 9 0 0 0 0 8.06l3.02-2.33z" />
               <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35L15 2.1A9 9 0 0 0 .95 4.97l3.02 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
             </svg>
-            Continue with Google
+            {isLoadingGoogle ? 'Connecting to Google...' : 'Continue with Google'}
           </button>
 
           {/* Form Switch Footer */}

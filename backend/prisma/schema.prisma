@@ -54,10 +54,12 @@ model User {
   lastName     String
   email        String    @unique
   phone        String?
-  passwordHash String
+  passwordHash String?
   profileImage String?
   city         String?
   country      String?
+  googleId     String?   @unique
+  authProvider String?   @default("local")
   bio          String?
   language     String?   @default("en")
   role         Role      @default(USER)
