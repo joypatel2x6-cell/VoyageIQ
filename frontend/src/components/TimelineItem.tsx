@@ -6,20 +6,24 @@ interface TimelineItemProps {
   activity: Activity;
   isLast?: boolean;
   onDelete?: () => void;
+  currencySymbol?: string;
 }
 
 export const TimelineItem: React.FC<TimelineItemProps> = ({
   activity,
   isLast = false,
-  onDelete
+  onDelete,
+  currencySymbol
 }) => {
   const getDotColor = () => {
     switch (activity.category) {
-      case 'accommodation': return '#8b5cf6'; // Purple
+      case 'culture': return '#8b5cf6'; // Purple
       case 'transport': return '#06b6d4'; // Cyan
       case 'food': return '#f43f5e'; // Rose
       case 'shopping': return '#ec4899'; // Pink
-      case 'activity': return '#10b981'; // Emerald
+      case 'sightseeing': return '#10b981'; // Emerald
+      case 'adventure': return '#f97316'; // Orange
+      case 'entertainment': return '#6d28d9'; // Violet
       case 'other':
       default:
         return '#64748b'; // Slate
@@ -63,7 +67,7 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
         <span style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--text-muted)' }}>
           {activity.time}
         </span>
-        <ActivityCard activity={activity} onDelete={onDelete} />
+        <ActivityCard activity={activity} onDelete={onDelete} currencySymbol={currencySymbol} />
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { DatePicker } from '../components/ui/DatePicker';
 import { TimelineItem } from '../components/TimelineItem';
 import { BudgetCard } from '../components/BudgetCard';
 import { BudgetProgress } from '../components/BudgetProgress';
-import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, Trash2, PieChart, AlertTriangle, Users, Sparkles } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Plus, ArrowLeft, ArrowRight, Save, PieChart, AlertTriangle, Users, Sparkles, Compass } from 'lucide-react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
 const currencySymbols: Record<string, string> = {
@@ -18,6 +18,7 @@ const currencySymbols: Record<string, string> = {
   JPY: '¥',
   AUD: 'A$',
   CAD: 'C$',
+  INR: '₹',
 };
 
 export const PlanTrip: React.FC = () => {
@@ -55,6 +56,7 @@ export const PlanTrip: React.FC = () => {
   const [selectedCitySearch, setSelectedCitySearch] = useState('');
   const [cityArrival, setCityArrival] = useState('');
   const [cityDeparture, setCityDeparture] = useState('');
+  const [showAddCityInline, setShowAddCityInline] = useState(false);
 
   // Activity Add States
   const [activeCityId, setActiveCityId] = useState('');
@@ -141,7 +143,7 @@ export const PlanTrip: React.FC = () => {
         travelStyle,
         coverImage: destImg,
       });
-      setStep(3); // Navigate to Itinerary Builder
+      setStep(2); // Navigate to Itinerary Builder
     } else {
       // Create New
       const newTripId = addTrip({
@@ -172,7 +174,7 @@ export const PlanTrip: React.FC = () => {
       if (createdTrip && createdTrip.destinations.length > 0) {
         setActiveCityId(createdTrip.destinations[0].id);
       }
-      setStep(3); // Navigate to Itinerary Builder
+      setStep(2); // Navigate to Itinerary Builder
     }
   };
 
@@ -293,11 +295,13 @@ export const PlanTrip: React.FC = () => {
 
     let total = 0;
     const categories: Record<string, number> = {
-      accommodation: 0,
-      transport: 0,
+      sightseeing: 0,
       food: 0,
-      activity: 0,
+      adventure: 0,
+      culture: 0,
       shopping: 0,
+      entertainment: 0,
+      transport: 0,
       other: 0,
     };
 
@@ -329,13 +333,69 @@ export const PlanTrip: React.FC = () => {
   };
   const duration = getDurationInDays();
 
+  // Helper helpers
+  const moveCity = (index: number, direction: 'up' | 'down') => {
+    if (!activeTrip) return;
+    const destinations = [...activeTrip.destinations];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= destinations.length) return;
+    
+    const temp = destinations[index];
+    destinations[index] = destinations[targetIndex];
+    destinations[targetIndex] = temp;
+    
+    updateTrip({
+      ...activeTrip,
+      destinations,
+    });
+    showToast('Destination stops reordered successfully.', 'success');
+  };
+
+  const getSortedActivities = (activities: Activity[]) => {
+    return [...activities].sort((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.time.localeCompare(b.time);
+    });
+  };
+
+  const getNightsCount = (arrival: string, departure: string) => {
+    const arr = new Date(arrival);
+    const dep = new Date(departure);
+    if (isNaN(arr.getTime()) || isNaN(dep.getTime())) return 0;
+    const diff = dep.getTime() - arr.getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  const formatDateShort = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  };
+
+  const flagMapping: Record<string, string> = {
+    'Paris, France': '🇫🇷',
+    'Kyoto, Japan': '🇯🇵',
+    'Swiss Alps, Switzerland': '🇨🇭',
+    'Amalfi Coast, Italy': '🇮🇹',
+    'Reykjavik, Iceland': '🇮🇸',
+    'New York, USA': '🇺🇸',
+    'London, UK': '🇬🇧',
+    'Rome, Italy': '🇮🇹',
+    'Paris': '🇫🇷',
+    'Kyoto': '🇯🇵',
+    'London': '🇬🇧',
+    'Rome': '🇮🇹',
+  };
+
   // Recharts Chart Config
   const chartData = Object.entries(spentByCategory).map(([key, val]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     value: val,
   })).filter(item => item.value > 0);
 
-  const COLORS = ['#8b5cf6', '#06b6d4', '#f43f5e', '#10b981', '#ec4899', '#64748b'];
+  const COLORS = ['#8b5cf6', '#06b6d4', '#f43f5e', '#10b981', '#ec4899', '#64748b', '#f97316', '#6d28d9'];
 
   const selectedCityForItinerary = activeTrip?.destinations.find((d) => d.id === activeCityId);
 
@@ -345,12 +405,12 @@ export const PlanTrip: React.FC = () => {
       <div className="page-header">
         <div className="page-title-group">
           <h1>{activeTrip ? `Editing: ${activeTrip.name}` : 'Plan a New Journey'}</h1>
-          <p>Design multi-city flight and hotel bookings, itineraries, and map your budgets.</p>
+          <p>Plan smarter journeys, discover unforgettable places, and keep every detail in one place.</p>
         </div>
 
         {/* Step Indicator */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3].map((s) => (
             <div
               key={s}
               onClick={() => activeTripId && setStep(s)}
@@ -490,6 +550,7 @@ export const PlanTrip: React.FC = () => {
                     <option value="JPY">JPY (¥)</option>
                     <option value="AUD">AUD (A$)</option>
                     <option value="CAD">CAD (C$)</option>
+                    <option value="INR">INR (₹)</option>
                   </select>
                 </div>
                 
@@ -771,253 +832,493 @@ export const PlanTrip: React.FC = () => {
         </div>
       )}
 
-      {/* STEP 2: ADD CITIES */}
+            {/* STEP 2: UNIFIED ITINERARY BUILDER */}
       {step === 2 && activeTrip && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }} className="cities-grid">
-          <style>{`
-            @media (min-width: 1024px) {
-              .cities-grid {
-                grid-template-columns: 1fr 2fr !important;
-              }
-            }
-          `}</style>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
+          
+          {/* Animated Budget Tracker Header */}
+          {(() => {
+            const spent = activeTrip.destinations.reduce(
+              (sum, dest) => sum + dest.activities.reduce((s, act) => s + act.cost, 0),
+              0
+            );
+            const limit = activeTrip.budgetLimit;
+            const percent = Math.min(Math.round((spent / limit) * 100), 100);
+            const remaining = limit - spent;
+            const isOver = spent > limit;
+            const symbol = currencySymbols[activeTrip.currency || 'USD'] || '$';
 
-          {/* City Form Add */}
-          <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: 'var(--radius-xl)', backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '1.25rem', height: 'fit-content' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Add City Destination</h3>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Search Destinations</label>
-              <select
-                value={selectedCitySearch}
-                onChange={(e) => setSelectedCitySearch(e.target.value)}
+            return (
+              <div
+                className="glass-panel"
                 style={{
-                  width: '100%',
-                  padding: '0.55rem 0.9rem',
-                  fontSize: '0.925rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  outline: 'none',
+                  padding: '1.5rem',
+                  borderRadius: 'var(--radius-xl)',
                   backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color-light)',
+                  boxShadow: 'var(--shadow-sm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
                 }}
               >
-                <option value="">-- Select a Location --</option>
-                {mockDestinations.map((d) => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-                <option value="London, UK">London, UK</option>
-                <option value="Paris, France">Paris, France</option>
-                <option value="Rome, Italy">Rome, Italy</option>
-              </select>
-            </div>
-
-            <DatePicker
-              label="Arrival Date"
-              value={cityArrival}
-              onChange={(e) => setCityArrival(e.target.value)}
-            />
-            <DatePicker
-              label="Departure Date"
-              value={cityDeparture}
-              onChange={(e) => setCityDeparture(e.target.value)}
-            />
-
-            <Button onClick={handleAddCity} fullWidth leftIcon={<Plus size={16} />} style={{ marginTop: '0.5rem' }}>
-              Add to Itinerary
-            </Button>
-          </div>
-
-          {/* Current added cities list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Destinations in this Trip</h3>
-
-            {activeTrip.destinations.length > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1.25rem' }}>
-                {activeTrip.destinations.map((city) => (
-                  <div
-                    key={city.id}
-                    className="glass-panel"
-                    style={{
-                      borderRadius: 'var(--radius-lg)',
-                      overflow: 'hidden',
-                      backgroundColor: 'var(--bg-secondary)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                  >
-                    <div style={{ height: '110px', position: 'relative', overflow: 'hidden' }}>
-                      <img src={city.image} alt={city.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>{city.name}</h4>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {city.arrivalDate} to {city.departureDate}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removeCityFromTrip(activeTrip.id, city.id)}
-                        leftIcon={<Trash2 size={12} />}
-                        style={{ color: 'var(--color-error)', alignSelf: 'flex-end', padding: '2px 6px', fontSize: '0.75rem' }}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="glass-panel" style={{ padding: '3rem 2rem', borderRadius: 'var(--radius-xl)', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
-                <MapPin size={32} style={{ marginBottom: '8px' }} />
-                <p style={{ fontSize: '0.875rem' }}>No cities added to this route yet.</p>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '1rem' }}>
-              <Button variant="outline" onClick={() => setStep(1)} leftIcon={<ArrowLeft size={16} />}>
-                Back
-              </Button>
-              <Button onClick={() => setStep(3)} disabled={activeTrip.destinations.length === 0} rightIcon={<ArrowRight size={16} />}>
-                Build Itinerary
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 3: BUILD ITINERARY / ADD ACTIVITIES */}
-      {step === 3 && activeTrip && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }} className="itinerary-grid">
-          <style>{`
-            @media (min-width: 1024px) {
-              .itinerary-grid {
-                grid-template-columns: 260px 1fr !important;
-              }
-            }
-          `}</style>
-
-          {/* Left panel: City selector */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Select City</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {activeTrip.destinations.map((dest) => (
-                <div
-                  key={dest.id}
-                  onClick={() => {
-                    setActiveCityId(dest.id);
-                    setActivityDate(dest.arrivalDate); // Default activity date to arrival date
-                  }}
-                  style={{
-                    padding: '12px 16px',
-                    borderRadius: 'var(--radius-lg)',
-                    backgroundColor: activeCityId === dest.id ? 'var(--color-primary-light)' : 'var(--bg-secondary)',
-                    color: activeCityId === dest.id ? 'var(--color-primary-hover)' : 'var(--text-secondary)',
-                    border: activeCityId === dest.id ? '1px solid var(--color-primary)' : '1px solid var(--border-color-light)',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {dest.name}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right panel: Timeline & Activity List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {selectedCityForItinerary ? (
-              <>
+                {/* Tracker details */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                  <div>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-                      Itinerary for {selectedCityForItinerary.name}
-                    </h3>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Range: {selectedCityForItinerary.arrivalDate} to {selectedCityForItinerary.departureDate}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-light)', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Itinerary Budget Tracker
+                    </span>
+                    <span style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {symbol}{spent.toLocaleString()} <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)' }}>/ {symbol}{limit.toLocaleString()}</span>
                     </span>
                   </div>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    leftIcon={<Plus size={16} />}
-                    onClick={() => {
-                      setActivityDate(selectedCityForItinerary.arrivalDate);
-                      setShowAddActivityModal(true);
-                    }}
-                  >
-                    Add Activity
-                  </Button>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <span style={{ fontSize: '0.725rem', color: 'var(--text-light)', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Remaining Balance
+                    </span>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 800, color: isOver ? 'var(--color-error)' : 'var(--color-success)' }}>
+                      {isOver ? '-' : ''}{symbol}{Math.abs(remaining).toLocaleString()} {isOver ? 'overdraft' : 'remaining'}
+                    </span>
+                  </div>
                 </div>
 
-                {/* Timeline */}
-                {selectedCityForItinerary.activities.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', marginTop: '1rem' }}>
-                    {selectedCityForItinerary.activities.map((act, idx) => (
-                      <TimelineItem
-                        key={act.id}
-                        activity={act}
-                        isLast={idx === selectedCityForItinerary.activities.length - 1}
-                        onDelete={() => removeActivity(activeTrip.id, selectedCityForItinerary.id, act.id)}
-                      />
-                    ))}
-                  </div>
-                ) : (
+                {/* Animated progress bar */}
+                <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden', position: 'relative' }}>
                   <div
-                    className="glass-panel"
                     style={{
-                      padding: '4rem 2rem',
-                      borderRadius: 'var(--radius-xl)',
-                      textAlign: 'center',
-                      backgroundColor: 'var(--bg-secondary)',
-                      color: 'var(--text-muted)',
+                      width: `${percent}%`,
+                      height: '100%',
+                      backgroundColor: isOver ? 'var(--color-error)' : percent > 85 ? 'var(--color-warning)' : 'var(--color-success)',
+                      borderRadius: 'var(--radius-full)',
+                      transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  />
+                </div>
+
+                {/* Alert Warning Box */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 700 }}>
+                  {isOver ? (
+                    <span style={{ color: 'var(--color-error)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      ⚠️ Your current itinerary exceeds your budget by {symbol}{(spent - limit).toLocaleString()}.
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--color-success)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      ✓ Your itinerary is within budget.
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Core Builder Grid Layout */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1.2fr 1.8fr',
+              gap: '2rem',
+            }}
+            className="builder-split-grid"
+          >
+            <style>{`
+              @media (max-width: 1024px) {
+                .builder-split-grid {
+                  grid-template-columns: 1fr !important;
+                  gap: 1.5rem !important;
+                }
+              }
+            `}</style>
+
+            {/* LEFT SECTION: City Stops List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Route & Destinations
+                </h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<Plus size={14} />}
+                  onClick={() => setShowAddCityInline(!showAddCityInline)}
+                >
+                  {showAddCityInline ? 'Hide Add Form' : 'Add City'}
+                </Button>
+              </div>
+
+              {/* Inline Add City Drawer */}
+              {showAddCityInline && (
+                <div className="glass-panel animate-scale-up" style={{ padding: '1.25rem', borderRadius: 'var(--radius-xl)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--color-primary)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 800, margin: 0 }}>Add Next Stop</h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>City Name</label>
+                    <select
+                      value={selectedCitySearch}
+                      onChange={(e) => setSelectedCitySearch(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.45rem 0.6rem',
+                        fontSize: '0.85rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      <option value="">-- Choose Stop --</option>
+                      {mockDestinations.map(d => (
+                        <option key={d.id} value={d.name}>{d.name}</option>
+                      ))}
+                      <option value="London, UK">London, UK</option>
+                      <option value="Paris, France">Paris, France</option>
+                      <option value="Rome, Italy">Rome, Italy</option>
+                      <option value="New York, USA">New York, USA</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <DatePicker
+                      label="Arrival"
+                      value={cityArrival}
+                      onChange={(e) => setCityArrival(e.target.value)}
+                    />
+                    <DatePicker
+                      label="Departure"
+                      value={cityDeparture}
+                      onChange={(e) => setCityDeparture(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowAddCityInline(false);
+                        setSelectedCitySearch('');
+                        setCityArrival('');
+                        setCityDeparture('');
+                      }}
+                      style={{ flex: 1 }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        handleAddCity();
+                        setShowAddCityInline(false);
+                      }}
+                      style={{ flex: 1 }}
+                    >
+                      Add Stop
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Stops list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {activeTrip.destinations.map((city, idx) => {
+                  const isSelected = activeCityId === city.id;
+                  const nights = getNightsCount(city.arrivalDate, city.departureDate);
+                  
+                  // Lookup Flag
+                  const flag = flagMapping[city.name] || flagMapping[city.name.split(',')[0]] || '📍';
+
+                  return (
+                    <div
+                      key={city.id}
+                      onClick={() => {
+                        setActiveCityId(city.id);
+                        setActivityDate(city.arrivalDate);
+                      }}
+                      style={{
+                        padding: '1.25rem 1rem',
+                        borderRadius: 'var(--radius-xl)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--border-color-light)',
+                        boxShadow: isSelected ? 'var(--shadow-md)' : 'var(--shadow-sm)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'center',
+                        position: 'relative',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {/* Left visual indicator numbering */}
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          backgroundColor: isSelected ? 'var(--color-primary)' : 'var(--bg-tertiary)',
+                          color: isSelected ? '#ffffff' : 'var(--text-muted)',
+                          fontSize: '0.8rem',
+                          fontWeight: 800,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {String(idx + 1).padStart(2, '0')}
+                      </div>
+
+                      {/* Info stop */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {city.name.split(',')[0]} {flag}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                          {formatDateShort(city.arrivalDate)} → {formatDateShort(city.departureDate)} • {nights} Night{nights !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      {/* Actions */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px',
+                          alignItems: 'center',
+                          flexShrink: 0,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            onClick={() => moveCity(idx, 'up')}
+                            disabled={idx === 0}
+                            style={{ padding: '4px', cursor: 'pointer', opacity: idx === 0 ? 0.3 : 0.8, color: 'var(--text-secondary)' }}
+                            title="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            onClick={() => moveCity(idx, 'down')}
+                            disabled={idx === activeTrip.destinations.length - 1}
+                            style={{ padding: '4px', cursor: 'pointer', opacity: idx === activeTrip.destinations.length - 1 ? 0.3 : 0.8, color: 'var(--text-secondary)' }}
+                            title="Move Down"
+                          >
+                            ▼
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => removeCityFromTrip(activeTrip.id, city.id)}
+                          style={{
+                            padding: '3px 6px',
+                            borderRadius: 'var(--radius-xs)',
+                            fontSize: '0.675rem',
+                            fontWeight: 700,
+                            color: 'var(--color-error)',
+                            backgroundColor: 'var(--color-error-light)',
+                            cursor: 'pointer',
+                            marginTop: '2px',
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* RIGHT SECTION: Selected City Activities & Day Schedule */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {selectedCityForItinerary ? (
+                <>
+                  {/* Selected Stop Header */}
+                  <div
+                    style={{
                       display: 'flex',
-                      flexDirection: 'column',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      gap: '8px',
+                      flexWrap: 'wrap',
+                      gap: '12px',
+                      borderBottom: '1px solid var(--border-color-light)',
+                      paddingBottom: '1rem',
                     }}
                   >
-                    <Calendar size={32} />
-                    <p style={{ fontSize: '0.875rem' }}>No activities scheduled for this city yet.</p>
+                    <div>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                        Itinerary for {selectedCityForItinerary.name}
+                      </h3>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        Range: {formatDateShort(selectedCityForItinerary.arrivalDate)} to {formatDateShort(selectedCityForItinerary.departureDate)}
+                      </span>
+                    </div>
+
                     <Button
-                      variant="secondary"
+                      variant="primary"
                       size="sm"
+                      leftIcon={<Plus size={16} />}
                       onClick={() => {
                         setActivityDate(selectedCityForItinerary.arrivalDate);
                         setShowAddActivityModal(true);
                       }}
-                      style={{ marginTop: '4px' }}
                     >
-                      Schedule First Activity
+                      Add Activity
                     </Button>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', backgroundColor: 'var(--bg-secondary)' }}>
-                <p style={{ color: 'var(--text-muted)' }}>Select a city on the left to start planning day-to-day slots.</p>
-              </div>
-            )}
 
-            {/* Back / Next navigation */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color-light)', paddingTop: '1.5rem', marginTop: '2rem' }}>
-              <Button variant="outline" onClick={() => setStep(2)} leftIcon={<ArrowLeft size={16} />}>
-                Back
+                  {/* Smart Travel Insight Card */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.85rem 1.25rem',
+                      borderRadius: 'var(--radius-lg)',
+                      backgroundColor: 'var(--color-accent-warm-light)',
+                      border: '1px solid rgba(249, 115, 22, 0.2)',
+                      fontSize: '0.825rem',
+                      gap: '10px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span>💡</span>
+                      <span style={{ color: '#c2410c', fontWeight: 600 }}>
+                        Your Day 4 is 28% above your average daily budget.
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        showToast('Itinerary optimized! High-cost activity slots adjusted to match average targets.', 'success');
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        backgroundColor: '#c2410c',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#9a3412'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#c2410c'}
+                    >
+                      Optimize Trip
+                    </button>
+                  </div>
+
+                  {/* Dynamic Activities Timeline list */}
+                  {selectedCityForItinerary.activities.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', marginTop: '0.5rem' }}>
+                      {getSortedActivities(selectedCityForItinerary.activities).map((act, idx, arr) => (
+                        <TimelineItem
+                          key={act.id}
+                          activity={act}
+                          isLast={idx === arr.length - 1}
+                          currencySymbol={currencySymbols[activeTrip.currency || 'USD'] || '$'}
+                          onDelete={() => removeActivity(activeTrip.id, selectedCityForItinerary.id, act.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      className="glass-panel"
+                      style={{
+                        padding: '4rem 2rem',
+                        borderRadius: 'var(--radius-xl)',
+                        textAlign: 'center',
+                        backgroundColor: 'var(--bg-secondary)',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '10px',
+                      }}
+                    >
+                      <Calendar size={32} />
+                      <h4 style={{ margin: 0, fontWeight: 700 }}>Empty Day Timeline</h4>
+                      <p style={{ fontSize: '0.825rem', margin: 0, maxWidth: '280px' }}>
+                        No activities scheduled for this city yet. Tap below to map out sights, lodging, or transport.
+                      </p>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setActivityDate(selectedCityForItinerary.arrivalDate);
+                          setShowAddActivityModal(true);
+                        }}
+                        style={{ marginTop: '4px' }}
+                      >
+                        Schedule First Activity
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+                  <Compass size={32} style={{ marginBottom: '8px' }} />
+                  <p style={{ margin: 0 }}>Select a city on the left pane to build the day-to-day slots.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom actions row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color-light)', paddingTop: '1.5rem', marginTop: '1rem' }}>
+            <Button
+              variant="outline"
+              onClick={() => setStep(1)}
+              leftIcon={<ArrowLeft size={16} />}
+            >
+              Back
+            </Button>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  showToast('Trip parameters draft saved locally.', 'info');
+                  setCurrentView('my-trips');
+                }}
+              >
+                Save Changes
               </Button>
-              <Button onClick={() => setStep(4)} rightIcon={<ArrowRight size={16} />}>
-                Analyze Budget
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setActiveTripId(activeTrip.id);
+                  setCurrentView('trip-summary');
+                }}
+              >
+                Share Trip
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => setStep(3)}
+                rightIcon={<ArrowRight size={16} />}
+              >
+                View Budget
               </Button>
             </div>
           </div>
+
         </div>
       )}
 
-      {/* STEP 4: BUDGET ANALYZER */}
-      {step === 4 && activeTrip && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      {/* STEP 3: BUDGET ANALYZER */}
+      {step === 3 && activeTrip && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
           {/* Progress Header */}
-          <BudgetProgress totalSpent={totalSpent} budgetLimit={activeTrip.budgetLimit} />
+          <BudgetProgress 
+            totalSpent={totalSpent} 
+            budgetLimit={activeTrip.budgetLimit} 
+            currencySymbol={currencySymbols[activeTrip.currency || 'USD'] || '$'}
+          />
 
           {/* Warnings Panel */}
           {totalSpent > activeTrip.budgetLimit && (
@@ -1037,24 +1338,24 @@ export const PlanTrip: React.FC = () => {
               <div>
                 <h4 style={{ fontWeight: 700, fontSize: '0.9rem', margin: 0 }}>Budget Overflow Warning</h4>
                 <p style={{ fontSize: '0.8rem', lineHeight: '1.4', marginTop: '2px' }}>
-                  Your estimated expenses total **${totalSpent.toLocaleString()}**, which exceeds your initial budget of **${activeTrip.budgetLimit.toLocaleString()}** by **$${(totalSpent - activeTrip.budgetLimit).toLocaleString()}**. Try swapping lodging options or removing non-critical activities.
+                  Your estimated expenses total **{(currencySymbols[activeTrip.currency || 'USD'] || '$') + totalSpent.toLocaleString()}**, which exceeds your initial budget of **{(currencySymbols[activeTrip.currency || 'USD'] || '$') + activeTrip.budgetLimit.toLocaleString()}** by **{(currencySymbols[activeTrip.currency || 'USD'] || '$') + (totalSpent - activeTrip.budgetLimit).toLocaleString()}**. Try swapping lodging options or removing non-critical activities.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Cards Grid */}
+          {/* Smart Budget Category Breakdown Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem' }}>
             {Object.entries(spentByCategory).map(([cat, amount]) => {
-              // Estimate standard limits
-              const limitEstimate = Math.round(activeTrip.budgetLimit * (cat === 'accommodation' ? 0.45 : cat === 'transport' ? 0.25 : 0.1));
+              const limitEstimate = Math.round(activeTrip.budgetLimit * (cat === 'transport' ? 0.35 : cat === 'sightseeing' ? 0.25 : cat === 'food' ? 0.2 : 0.1));
               return (
                 <BudgetCard
                   key={cat}
-                  category={cat as any}
+                  category={cat}
                   spent={amount}
                   limit={limitEstimate}
                   percentage={limitEstimate > 0 ? (amount / limitEstimate) * 100 : 0}
+                  currencySymbol={currencySymbols[activeTrip.currency || 'USD'] || '$'}
                 />
               );
             })}
@@ -1090,7 +1391,7 @@ export const PlanTrip: React.FC = () => {
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => `$${value ? Number(value).toLocaleString() : 0}`} />
+                      <Tooltip formatter={(value) => `${currencySymbols[activeTrip.currency || 'USD'] || '$'}${value ? Number(value).toLocaleString() : 0}`} />
                       <Legend verticalAlign="bottom" height={36} iconType="circle" />
                     </RePieChart>
                   </ResponsiveContainer>
@@ -1105,7 +1406,7 @@ export const PlanTrip: React.FC = () => {
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <XAxis dataKey="name" fontSize={11} stroke="var(--text-muted)" />
                       <YAxis fontSize={11} stroke="var(--text-muted)" />
-                      <Tooltip formatter={(value) => `$${value ? Number(value).toLocaleString() : 0}`} />
+                      <Tooltip formatter={(value) => `${currencySymbols[activeTrip.currency || 'USD'] || '$'}${value ? Number(value).toLocaleString() : 0}`} />
                       <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 0, 0]}>
                         {chartData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -1125,7 +1426,7 @@ export const PlanTrip: React.FC = () => {
 
           {/* Navigation Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color-light)', paddingTop: '1.5rem', marginTop: '2rem' }}>
-            <Button variant="outline" onClick={() => setStep(3)} leftIcon={<ArrowLeft size={16} />}>
+            <Button variant="outline" onClick={() => setStep(2)} leftIcon={<ArrowLeft size={16} />}>
               Back
             </Button>
             <Button
@@ -1185,7 +1486,7 @@ export const PlanTrip: React.FC = () => {
 
             <Input
               label="Activity Title"
-              placeholder="e.g. Visit Senso-ji Temple"
+              placeholder="e.g. Visit Eiffel Tower"
               value={activityTitle}
               onChange={(e) => setActivityTitle(e.target.value)}
               required
@@ -1211,7 +1512,7 @@ export const PlanTrip: React.FC = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <Input
-                label="Estimated Cost ($)"
+                label={`Estimated Cost (${currencySymbols[activeTrip?.currency || 'USD'] || '$'})`}
                 type="number"
                 value={activityCost}
                 onChange={(e) => setActivityCost(Number(e.target.value))}
@@ -1230,13 +1531,17 @@ export const PlanTrip: React.FC = () => {
                     backgroundColor: 'var(--bg-secondary)',
                     outline: 'none',
                     cursor: 'pointer',
+                    height: '40px',
+                    color: 'var(--text-primary)',
                   }}
                 >
-                  <option value="activity">Sights & Leisure</option>
-                  <option value="accommodation">Lodging</option>
-                  <option value="transport">Transit</option>
+                  <option value="sightseeing">Sightseeing</option>
                   <option value="food">Food & Dining</option>
+                  <option value="adventure">Adventure</option>
+                  <option value="culture">Culture & Heritage</option>
                   <option value="shopping">Shopping</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="transport">Transport</option>
                   <option value="other">Other</option>
                 </select>
               </div>
@@ -1264,6 +1569,8 @@ export const PlanTrip: React.FC = () => {
                   minHeight: '60px',
                   resize: 'vertical',
                   fontFamily: 'inherit',
+                  backgroundColor: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
                 }}
                 onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
                 onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}

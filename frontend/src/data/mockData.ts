@@ -4,7 +4,7 @@ export interface Activity {
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
   cost: number;
-  category: 'accommodation' | 'transport' | 'food' | 'activity' | 'shopping' | 'other';
+  category: 'sightseeing' | 'food' | 'adventure' | 'culture' | 'shopping' | 'entertainment' | 'transport' | 'other' | 'accommodation' | 'activity';
   location: string;
   notes?: string;
 }

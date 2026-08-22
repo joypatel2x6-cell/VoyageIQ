@@ -1,27 +1,32 @@
 import React from 'react';
-import { Bed, Plane, Utensils, Compass, ShoppingBag, Tag, AlertTriangle } from 'lucide-react';
+import { Bed, Plane, Utensils, Compass, ShoppingBag, Tag, AlertTriangle, Flame, Palette, Music } from 'lucide-react';
 
 interface BudgetCardProps {
-  category: 'accommodation' | 'transport' | 'food' | 'activity' | 'shopping' | 'other' | 'total';
+  category: string;
   spent: number;
   limit?: number;
   percentage: number;
+  currencySymbol?: string;
 }
 
 export const BudgetCard: React.FC<BudgetCardProps> = ({
   category,
   spent,
   limit,
-  percentage
+  percentage,
+  currencySymbol = '$'
 }) => {
   const getIcon = () => {
     const size = 18;
     switch (category) {
-      case 'accommodation': return <Bed size={size} color="#8b5cf6" />;
+      case 'sightseeing': return <Compass size={size} color="#10b981" />;
       case 'transport': return <Plane size={size} color="#06b6d4" />;
       case 'food': return <Utensils size={size} color="#f43f5e" />;
-      case 'activity': return <Compass size={size} color="#10b981" />;
+      case 'adventure': return <Flame size={size} color="#f97316" />;
+      case 'culture': return <Palette size={size} color="#8b5cf6" />;
       case 'shopping': return <ShoppingBag size={size} color="#ec4899" />;
+      case 'entertainment': return <Music size={size} color="#6d28d9" />;
+      case 'accommodation': return <Bed size={size} color="#8b5cf6" />;
       case 'total': return <Tag size={size} color="var(--color-primary)" />;
       default:
         return <Tag size={size} color="#64748b" />;
@@ -30,11 +35,14 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
 
   const getCategoryLabel = () => {
     switch (category) {
-      case 'accommodation': return 'Lodging';
+      case 'sightseeing': return 'Sightseeing';
       case 'transport': return 'Transport';
       case 'food': return 'Food & Dining';
-      case 'activity': return 'Activities';
+      case 'adventure': return 'Adventure';
+      case 'culture': return 'Culture & Heritage';
       case 'shopping': return 'Shopping';
+      case 'entertainment': return 'Entertainment';
+      case 'accommodation': return 'Lodging';
       case 'total': return 'Total Budget';
       default:
         return 'Other Expenses';
@@ -98,11 +106,11 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({
       {/* Figures */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
         <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-          ${spent.toLocaleString()}
+          {currencySymbol}{spent.toLocaleString()}
         </span>
         {limit !== undefined && (
           <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
-            of ${limit.toLocaleString()} limit ({Math.round(percentage)}%)
+            of {currencySymbol}{limit.toLocaleString()} limit ({Math.round(percentage)}%)
           </span>
         )}
       </div>

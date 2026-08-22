@@ -5,11 +5,13 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 interface BudgetProgressProps {
   totalSpent: number;
   budgetLimit: number;
+  currencySymbol?: string;
 }
 
 export const BudgetProgress: React.FC<BudgetProgressProps> = ({
   totalSpent,
-  budgetLimit
+  budgetLimit,
+  currencySymbol = '$'
 }) => {
   const percent = budgetLimit > 0 ? (totalSpent / budgetLimit) * 100 : 0;
   const isOver = totalSpent > budgetLimit;
@@ -33,10 +35,10 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({
           </span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '4px' }}>
             <span style={{ fontSize: '1.875rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-              ${totalSpent.toLocaleString()}
+              {currencySymbol}{totalSpent.toLocaleString()}
             </span>
             <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)' }}>
-              spent of ${budgetLimit.toLocaleString()}
+              spent of {currencySymbol}{budgetLimit.toLocaleString()}
             </span>
           </div>
         </div>
@@ -63,7 +65,7 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({
           borderRadius: 'var(--radius-full)',
           overflow: 'hidden',
           position: 'relative',
-        }}
+         }}
       >
         <div
           style={{
@@ -81,11 +83,11 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({
         <span>{Math.round(percent)}% utilized</span>
         {isOver ? (
           <span style={{ color: 'var(--color-error)', fontWeight: 600 }}>
-            Exceeded by ${Math.abs(remaining).toLocaleString()}
+            Exceeded by {currencySymbol}{Math.abs(remaining).toLocaleString()}
           </span>
         ) : (
           <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-            ${remaining.toLocaleString()} remaining
+            {currencySymbol}{remaining.toLocaleString()} remaining
           </span>
         )}
       </div>

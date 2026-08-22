@@ -1,29 +1,35 @@
 import React from 'react';
 import type { Activity } from '../data/mockData';
-import { Bed, Plane, Utensils, MapPin, Compass, ShoppingBag, Tag, Trash2, Clock } from 'lucide-react';
+import { Plane, Utensils, MapPin, Compass, ShoppingBag, Tag, Trash2, Clock, Flame, Palette, Music } from 'lucide-react';
 
 interface ActivityCardProps {
   activity: Activity;
   onDelete?: () => void;
+  currencySymbol?: string;
 }
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
   activity,
-  onDelete
+  onDelete,
+  currencySymbol = '$'
 }) => {
   const getCategoryIcon = () => {
     const size = 16;
     switch (activity.category) {
-      case 'accommodation':
-        return <Bed size={size} color="#8b5cf6" />; // purple
+      case 'sightseeing':
+        return <Compass size={size} color="#10b981" />; // emerald
       case 'transport':
         return <Plane size={size} color="#06b6d4" />; // cyan
       case 'food':
         return <Utensils size={size} color="#f43f5e" />; // rose
       case 'shopping':
         return <ShoppingBag size={size} color="#ec4899" />; // pink
-      case 'activity':
-        return <Compass size={size} color="#10b981" />; // emerald
+      case 'adventure':
+        return <Flame size={size} color="#f97316" />; // orange
+      case 'culture':
+        return <Palette size={size} color="#8b5cf6" />; // purple
+      case 'entertainment':
+        return <Music size={size} color="#6d28d9" />; // violet
       case 'other':
       default:
         return <Tag size={size} color="#64748b" />; // slate
@@ -32,11 +38,13 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 
   const getCategoryColor = () => {
     switch (activity.category) {
-      case 'accommodation': return '#f3e8ff';
+      case 'sightseeing': return '#d1fae5';
       case 'transport': return '#ecfeff';
       case 'food': return '#ffe4e6';
       case 'shopping': return '#fce7f3';
-      case 'activity': return '#d1fae5';
+      case 'adventure': return '#ffedd5';
+      case 'culture': return '#f3e8ff';
+      case 'entertainment': return '#ede9fe';
       case 'other':
       default:
         return '#f1f5f9';
@@ -98,7 +106,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             {activity.title}
           </h4>
           <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>
-            {activity.cost > 0 ? `$${activity.cost}` : 'Free'}
+            {activity.cost > 0 ? `${currencySymbol}${activity.cost.toLocaleString()}` : 'Free'}
           </span>
         </div>
 
