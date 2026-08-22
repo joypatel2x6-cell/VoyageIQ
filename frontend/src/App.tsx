@@ -15,9 +15,20 @@ import { CalendarView } from './views/CalendarView';
 import { TripSummary } from './views/TripSummary';
 import { ThingsToDo } from './views/ThingsToDo';
 import { Profile } from './views/Profile';
+import { SharedTrip } from './views/SharedTrip';
 
 const MainLayout: React.FC = () => {
   const { currentView, isAuthenticated } = useApp();
+
+  // Allow shared trip page without login
+  if (currentView === 'shared-trip') {
+    return (
+      <>
+        <SharedTrip />
+        <ToastContainer />
+      </>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -46,6 +57,9 @@ const MainLayout: React.FC = () => {
         return <ThingsToDo />;
       case 'profile':
         return <Profile />;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      case ('shared-trip' as any):
+        return <SharedTrip />;
       case 'dashboard':
       default:
         return <Dashboard />;

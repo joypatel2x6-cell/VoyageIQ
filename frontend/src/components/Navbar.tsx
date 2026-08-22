@@ -17,6 +17,8 @@ export const Navbar: React.FC = () => {
       case 'calendar': return 'Trip Calendar';
       case 'trip-summary': return 'Trip Overview';
       case 'things-to-do': return 'Discover Things To Do';
+      case 'profile': return 'My Profile';
+      case 'shared-trip': return 'Shared Trip Preview';
       default: return 'VoyageIQ';
     }
   };

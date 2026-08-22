@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp, type ViewType } from '../context/AppContext';
-import { LayoutDashboard, Map, CalendarPlus, Compass, Share2, Calendar, Sparkles, UserCircle2 } from 'lucide-react';
+import { LayoutDashboard, Map, CalendarPlus, Compass, Share2, Calendar, Sparkles, UserCircle2, ExternalLink } from 'lucide-react';
 
 interface NavItem {
   view: ViewType;
@@ -20,6 +20,7 @@ export const Sidebar: React.FC = () => {
     { view: 'community', label: 'Community', icon: <Share2 size={20} /> },
     { view: 'calendar', label: 'Calendar', icon: <Calendar size={20} /> },
     { view: 'profile', label: 'My Profile', icon: <UserCircle2 size={20} /> },
+    { view: 'shared-trip', label: 'Shared Trip Demo', icon: <ExternalLink size={20} /> },
   ];
 
   const sidebarStyle: React.CSSProperties = {
