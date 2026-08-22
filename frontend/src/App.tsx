@@ -16,6 +16,7 @@ import { TripSummary } from './views/TripSummary';
 import { ThingsToDo } from './views/ThingsToDo';
 import { Profile } from './views/Profile';
 import { SharedTrip } from './views/SharedTrip';
+import { Insights } from './views/Insights';
 
 const MainLayout: React.FC = () => {
   const { currentView, isAuthenticated } = useApp();
@@ -60,6 +61,8 @@ const MainLayout: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       case ('shared-trip' as any):
         return <SharedTrip />;
+      case 'insights':
+        return <Insights />;
       case 'dashboard':
       default:
         return <Dashboard />;
