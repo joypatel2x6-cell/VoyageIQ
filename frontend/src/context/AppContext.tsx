@@ -165,9 +165,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             0
           );
 
+          const currencySymbols: Record<string, string> = {
+            USD: '$',
+            EUR: '€',
+            GBP: '£',
+            JPY: '¥',
+            AUD: 'A$',
+            CAD: 'C$',
+            INR: '₹',
+          };
+          const symbol = currencySymbols[t.currency || 'USD'] || '$';
+
           if (totalCost > t.budgetLimit) {
             setTimeout(() => {
-              showToast(`Budget warning! Expenses ($${totalCost}) exceed your limit of $${t.budgetLimit}!`, 'warning');
+              showToast(`Budget warning! Expenses (${symbol}${totalCost.toLocaleString()}) exceed your limit of ${symbol}${t.budgetLimit.toLocaleString()}!`, 'warning');
             }, 100);
           }
 
