@@ -1,22 +1,34 @@
 import React, { useState } from 'react';
 import type { Trip } from '../data/mockData';
-import { Calendar, Users, Trash2, Edit3, ArrowRight, Eye, Share2 } from 'lucide-react';
+import { Calendar, Users, Trash2, Edit3, ArrowRight, Eye, Share2, Copy } from 'lucide-react';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { ConfirmationDialog } from './ui/ConfirmationDialog';
+
+const currencySymbols: Record<string, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  AUD: 'A$',
+  CAD: 'C$',
+  INR: '₹',
+};
 
 interface TripCardProps {
   trip: Trip;
   onView: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+  onDuplicate?: (trip: Trip) => void;
 }
 
 export const TripCard: React.FC<TripCardProps> = ({
   trip,
   onView,
   onDelete,
-  onEdit
+  onEdit,
+  onDuplicate
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -28,6 +40,16 @@ export const TripCard: React.FC<TripCardProps> = ({
 
   const budgetPercent = Math.min(Math.round((totalCost / trip.budgetLimit) * 100), 100);
   const isOverBudget = totalCost > trip.budgetLimit;
+  const symbol = currencySymbols[trip.currency || 'USD'] || '$';
+
+  const getDurationInDays = () => {
+    const start = new Date(trip.startDate);
+    const end = new Date(trip.endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+    const diffTime = end.getTime() - start.getTime();
+    return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+  };
+  const duration = getDurationInDays();
 
   // Format dates: YYYY-MM-DD to "Oct 15, 2026"
   const formatDate = (dateStr: string) => {
@@ -117,13 +139,26 @@ export const TripCard: React.FC<TripCardProps> = ({
       </div>
 
       {/* Main Info */}
-      <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
+      <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1 }}>
         {/* Date Row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.825rem' }}>
           <Calendar size={14} color="var(--text-light)" />
           <span>{formatDate(trip.startDate)}</span>
           <ArrowRight size={12} color="var(--text-light)" />
           <span>{formatDate(trip.endDate)}</span>
+        </div>
+
+        {/* Metas Row: Duration, Stops, Travelers */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '0.725rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+          <span style={{ backgroundColor: 'var(--bg-tertiary)', padding: '3px 8px', borderRadius: 'var(--radius-sm)' }}>
+            {duration} Day{duration !== 1 ? 's' : ''}
+          </span>
+          <span style={{ backgroundColor: 'var(--bg-tertiary)', padding: '3px 8px', borderRadius: 'var(--radius-sm)' }}>
+            {trip.destinations.length} Stop{trip.destinations.length !== 1 ? 's' : ''}
+          </span>
+          <span style={{ backgroundColor: 'var(--bg-tertiary)', padding: '3px 8px', borderRadius: 'var(--radius-sm)' }}>
+            {trip.travelersCount || 1} Traveler{(trip.travelersCount || 1) !== 1 ? 's' : ''}
+          </span>
         </div>
 
         {/* Destinations Multi-City Route */}
@@ -142,7 +177,7 @@ export const TripCard: React.FC<TripCardProps> = ({
                     color: 'var(--text-secondary)',
                   }}
                 >
-                  {dest.name}
+                  {dest.name.split(',')[0]}
                 </span>
               </React.Fragment>
             ))}
@@ -154,7 +189,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600 }}>
             <span style={{ color: 'var(--text-secondary)' }}>Budget Spent</span>
             <span style={{ color: isOverBudget ? 'var(--color-error)' : 'var(--color-success)' }}>
-              ${totalCost.toLocaleString()} / ${trip.budgetLimit.toLocaleString()}
+              {symbol}{totalCost.toLocaleString()} / {symbol}{trip.budgetLimit.toLocaleString()}
             </span>
           </div>
 
@@ -241,6 +276,15 @@ export const TripCard: React.FC<TripCardProps> = ({
               style={{ padding: '4px 8px' }}
             >
               <Edit3 size={15} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onDuplicate && onDuplicate(trip)}
+              title="Duplicate Trip"
+              style={{ padding: '4px 8px' }}
+            >
+              <Copy size={15} />
             </Button>
             <Button
               size="sm"
