@@ -514,40 +514,48 @@ export const Dashboard: React.FC = () => {
 
           {mockDestinations.map((dest) => (
             <div key={dest.id} className="carousel-card">
-              <div style={{ height: '150px', position: 'relative', overflow: 'hidden' }}>
-                <img src={dest.image} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                
-                {/* Rating */}
-                <div style={{ position: 'absolute', top: '12px', right: '12px', padding: '3px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', color: '#ffffff', fontSize: '0.725rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <div style={{ height: '175px', position: 'relative', overflow: 'hidden' }}>
+                <img
+                  src={dest.image}
+                  alt={dest.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
+                  }}
+                />
+
+                {/* Gradient overlay for text readability */}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(11,19,41,0.85))' }} />
+
+                {/* Rating badge */}
+                <div style={{ position: 'absolute', top: '10px', right: '10px', padding: '3px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', color: '#ffffff', fontSize: '0.7rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
                   ★ {dest.rating}
+                </div>
+
+                {/* City name + country ON the image */}
+                <div style={{ position: 'absolute', bottom: '10px', left: '12px', right: '12px', color: '#ffffff' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, lineHeight: 1.1 }}>
+                    {dest.name.split(',')[0]}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', opacity: 0.85, marginTop: '1px', fontWeight: 500 }}>
+                    {dest.name.split(',').slice(1).join(',').trim() || 'World Destination'}
+                  </div>
                 </div>
               </div>
 
-              <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                    {dest.name.split(',')[0]}
-                  </h4>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    {dest.name.split(',')[1]?.trim() || 'Travel Spot'}
-                  </span>
+              <div style={{ padding: '0.85rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                  <span style={{ fontSize: '0.675rem', color: 'var(--text-light)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>DAILY BUDGET</span>
+                  <span style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '0.9rem' }}>${dest.dailyBudgetEstimate}/day</span>
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 'auto', borderTop: '1px solid var(--border-color-light)', paddingTop: '0.75rem' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '0.675rem', color: 'var(--text-light)', fontWeight: 600 }}>DAILY BUDGET</span>
-                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>${dest.dailyBudgetEstimate}/day</span>
-                  </div>
-                  
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleQuickPlan(dest.name)}
-                    style={{ padding: '2px 8px', fontSize: '0.75rem', borderRadius: 'var(--radius-sm)' }}
-                  >
-                    Add to Trip
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleQuickPlan(dest.name)}
+                  style={{ padding: '4px 12px', fontSize: '0.75rem', borderRadius: 'var(--radius-sm)' }}
+                >
+                  Add to Trip
+                </Button>
               </div>
             </div>
           ))}
@@ -609,16 +617,31 @@ export const Dashboard: React.FC = () => {
                 }}
               >
                 {/* Photo cover */}
-                <div style={{ height: '110px', position: 'relative' }}>
+                <div style={{ height: '145px', position: 'relative', overflow: 'hidden' }}>
                   <img
-                    src={trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800'}
+                    src={trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop'}
                     alt={trip.name}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
+                    }}
                   />
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.15)' }} />
-                  
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(11,19,41,0.05) 0%, rgba(11,19,41,0.82) 100%)' }} />
+
                   <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
                     {getStatusBadge()}
+                  </div>
+
+                  {/* Trip name + place on image */}
+                  <div style={{ position: 'absolute', bottom: '8px', left: '10px', right: '10px', color: '#fff' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 800, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}>
+                      {trip.name}
+                    </div>
+                    {trip.destinations.length > 0 && (
+                      <div style={{ fontSize: '0.65rem', opacity: 0.85, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        📍 {trip.destinations.map(d => d.name).join(' → ')}
+                      </div>
+                    )}
                   </div>
                 </div>
 

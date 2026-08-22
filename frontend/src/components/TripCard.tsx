@@ -96,11 +96,14 @@ export const TripCard: React.FC<TripCardProps> = ({
       }}
     >
       {/* Visual cover from first destination or fallback */}
-      <div style={{ position: 'relative', height: '140px', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: '175px', overflow: 'hidden' }}>
         <img
-          src={trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800'}
+          src={trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop'}
           alt={trip.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
+          onError={(e) => {
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
+          }}
         />
         <div
           style={{
@@ -109,7 +112,7 @@ export const TripCard: React.FC<TripCardProps> = ({
             left: 0,
             width: '100%',
             height: '100%',
-            background: 'linear-gradient(to bottom, rgba(11, 19, 41, 0.2), rgba(11, 19, 41, 0.75))',
+            background: 'linear-gradient(to bottom, rgba(11, 19, 41, 0.1) 0%, rgba(11, 19, 41, 0.82) 100%)',
           }}
         />
 
@@ -127,14 +130,19 @@ export const TripCard: React.FC<TripCardProps> = ({
           </div>
         )}
 
-        {/* Name and description overlay */}
-        <div style={{ position: 'absolute', bottom: '12px', left: '16px', right: '16px', zIndex: 2, color: 'var(--text-on-dark)' }}>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {/* Trip name + first destination place on the image */}
+        <div style={{ position: 'absolute', bottom: '12px', left: '14px', right: '14px', zIndex: 2, color: '#ffffff' }}>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, textShadow: '0 1px 4px rgba(0,0,0,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {trip.name}
           </h3>
-          <p style={{ fontSize: '0.75rem', opacity: 0.85, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {trip.description}
-          </p>
+          {trip.destinations.length > 0 && (
+            <div style={{ fontSize: '0.72rem', opacity: 0.88, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '0.65rem' }}>📍</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {trip.destinations.map(d => d.name).join(' → ')}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

@@ -53,7 +53,7 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
       }}
     >
       {/* Photo header */}
-      <div style={{ position: 'relative', width: '100%', paddingTop: '58%', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', paddingTop: '62%', overflow: 'hidden' }}>
         <img
           src={destination.image}
           alt={destination.name}
@@ -66,7 +66,14 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
             objectFit: 'cover',
             transition: 'transform 0.5s ease',
           }}
+          onError={(e) => {
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
+          }}
         />
+
+        {/* Bottom gradient for text */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 35%, rgba(11,19,41,0.88))' }} />
+
         {/* Category Badge overlay */}
         <div style={{ position: 'absolute', top: '12px', left: '12px', zIndex: 2 }}>
           <Badge variant="info">
@@ -95,6 +102,16 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
         >
           <Star size={12} fill="var(--color-accent-warm)" color="var(--color-accent-warm)" />
           {destination.rating}
+        </div>
+
+        {/* City name + country on the image */}
+        <div style={{ position: 'absolute', bottom: '10px', left: '12px', right: '12px', zIndex: 2, color: '#ffffff' }}>
+          <div style={{ fontSize: '1.05rem', fontWeight: 800, lineHeight: 1.15, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>
+            {destination.name.split(',')[0]}
+          </div>
+          <div style={{ fontSize: '0.72rem', opacity: 0.85, marginTop: '1px', fontWeight: 500 }}>
+            {destination.name.split(',').slice(1).join(',').trim() || 'World Destination'}
+          </div>
         </div>
       </div>
 

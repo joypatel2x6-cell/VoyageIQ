@@ -91,9 +91,12 @@ const TripDetailModal: React.FC<{ post: CommunityPost; onClose: () => void; onCo
         {/* Cover header */}
         <div style={{ position: 'relative', height: '200px', flexShrink: 0 }}>
           <img
-            src={post.trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800'}
+            src={post.trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop'}
             alt={post.trip.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
+            }}
           />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(11,19,41,0.05), rgba(11,19,41,0.88))' }} />
           <button
@@ -223,13 +226,16 @@ const CommunityCard: React.FC<{
       className="card-hover"
     >
       {/* Cover image with gradient */}
-      <div style={{ position: 'relative', paddingTop: '52%', overflow: 'hidden', cursor: 'pointer' }} onClick={onView}>
+      <div style={{ position: 'relative', paddingTop: '56%', overflow: 'hidden', cursor: 'pointer' }} onClick={onView}>
         <img
-          src={post.trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800'}
+          src={post.trip.destinations[0]?.image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop'}
           alt={post.trip.name}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.4s ease' }}
+          onError={(e) => {
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop';
+          }}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(11,19,41,0.75))' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 20%, rgba(11,19,41,0.88))' }} />
 
         {/* Travel style badge */}
         <div style={{ position: 'absolute', top: 12, left: 12 }}>
@@ -244,10 +250,22 @@ const CommunityCard: React.FC<{
           {post.likesCount}
         </div>
 
-        {/* Author pill */}
-        <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', alignItems: 'center', gap: 7, backgroundColor: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', padding: '5px 10px', borderRadius: 'var(--radius-full)' }}>
-          <img src={post.authorAvatar} alt={post.authorName} style={{ width: 22, height: 22, borderRadius: '50%' }} />
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff' }}>{post.authorName}</span>
+        {/* Trip name + place overlay at bottom */}
+        <div style={{ position: 'absolute', bottom: 10, left: 12, right: 12 }}>
+          <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', lineHeight: 1.2, textShadow: '0 1px 4px rgba(0,0,0,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {post.trip.name}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+            <img src={post.authorAvatar} alt={post.authorName} style={{ width: 18, height: 18, borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.6)', flexShrink: 0 }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{post.authorName}</span>
+            {post.trip.destinations.length > 0 && (
+              <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                · 📍 {post.trip.destinations.map(d => d.name).join(' → ')}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
