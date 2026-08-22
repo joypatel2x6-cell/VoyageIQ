@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { mockDestinations } from '../data/mockData';
 import { DestinationCard } from '../components/DestinationCard';
@@ -75,6 +75,7 @@ export const Explore: React.FC = () => {
   const [minRatingFilter, setMinRatingFilter] = useState('All');
   const [styleFilter, setStyleFilter] = useState('All');
   const [sortBy, setSortBy] = useState<'popular' | 'cheapest' | 'recommended' | 'alphabetical'>('popular');
+  const [groupBy, setGroupBy] = useState<'region' | 'cost' | 'style' | 'none'>('none');
 
   // Modal views state
   const [selectedDestForModal, setSelectedDestForModal] = useState<DestinationSuggestion | null>(null);
@@ -147,6 +148,26 @@ export const Explore: React.FC = () => {
         return b.rating - a.rating;
       }
     });
+
+  // Grouping maps
+  const getDestRegion = (destName: string) => regionMap[destName] || 'Europe';
+  const getDestCostIndex = (dest: any) => dest.dailyBudgetEstimate <= 150 ? '$$ (Economy)' : dest.dailyBudgetEstimate <= 230 ? '$$$ (Mid-range)' : '$$$$ (Premium)';
+  const getDestStyle = (destName: string) => budgetStyleMap[destName] || 'Balanced';
+
+  const groupedDestinations = useMemo(() => {
+    if (groupBy === 'none') return null;
+    const groups: Record<string, typeof filteredDestinations> = {};
+    filteredDestinations.forEach(dest => {
+      let key = 'Other';
+      if (groupBy === 'region') key = getDestRegion(dest.name);
+      else if (groupBy === 'cost') key = getDestCostIndex(dest);
+      else if (groupBy === 'style') key = getDestStyle(dest.name);
+      
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(dest);
+    });
+    return groups;
+  }, [filteredDestinations, groupBy]);
 
   // Actions
   const handleOpenAddStop = (dest: DestinationSuggestion) => {
@@ -462,6 +483,31 @@ export const Explore: React.FC = () => {
             </select>
           </div>
 
+          {/* Group By selector */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '130px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Group By</label>
+            <select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value as any)}
+              style={{
+                padding: '0.45rem 0.6rem',
+                fontSize: '0.85rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                fontWeight: 600,
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="none">No Grouping</option>
+              <option value="region">Region</option>
+              <option value="cost">Cost Index</option>
+              <option value="style">Budget Style</option>
+            </select>
+          </div>
+
         </div>
 
         {/* Clear Filters indicator */}
@@ -493,16 +539,43 @@ export const Explore: React.FC = () => {
 
       {/* Destinations Grid Gallery */}
       {filteredDestinations.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-          {filteredDestinations.map((dest) => (
-            <DestinationCard
-              key={dest.id}
-              destination={dest}
-              onViewDetails={setSelectedDestForModal}
-              onAddToTrip={handleOpenAddStop}
-            />
-          ))}
-        </div>
+        groupBy === 'none' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {filteredDestinations.map((dest) => (
+              <DestinationCard
+                key={dest.id}
+                destination={dest}
+                onViewDetails={setSelectedDestForModal}
+                onAddToTrip={handleOpenAddStop}
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+            {Object.entries(groupedDestinations || {}).map(([groupName, items]) => (
+              <div key={groupName} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color-light)', paddingBottom: '6px' }}>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    {groupName}
+                  </h2>
+                  <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', fontWeight: 700 }}>
+                    {items.length}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {items.map((dest) => (
+                    <DestinationCard
+                      key={dest.id}
+                      destination={dest}
+                      onViewDetails={setSelectedDestForModal}
+                      onAddToTrip={handleOpenAddStop}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : (
         <div
           className="glass-panel"

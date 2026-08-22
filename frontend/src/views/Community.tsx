@@ -343,8 +343,10 @@ export const Community: React.FC = () => {
   const [selectedDuration, setSelectedDuration] = useState('Any Duration');
   const [maxBudget, setMaxBudget] = useState('');
   const [sortBy, setSortBy] = useState('Most Popular');
+  const [groupBy, setGroupBy] = useState<'style' | 'duration' | 'none'>('none');
   const [viewPost, setViewPost] = useState<CommunityPost | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
 
   // Derived: filter + sort
   const filtered = useMemo(() => {
@@ -399,6 +401,27 @@ export const Community: React.FC = () => {
 
     return list;
   }, [communityPosts, searchTerm, selectedStyle, selectedDuration, maxBudget, sortBy]);
+
+  // Grouped community posts computation
+  const grouped = useMemo(() => {
+    if (groupBy === 'none') return null;
+    const groups: Record<string, typeof filtered> = {};
+    filtered.forEach(post => {
+      let key = 'Other';
+      if (groupBy === 'style') {
+        key = `${post.trip.travelStyle || 'Balanced'} Travel`;
+      } else if (groupBy === 'duration') {
+        const d = getDays(post.trip.startDate, post.trip.endDate);
+        if (d <= 4) key = 'Weekend Trips (1-4 days)';
+        else if (d <= 7) key = 'Short Trips (5-7 days)';
+        else if (d <= 14) key = 'Long Trips (8-14 days)';
+        else key = 'Extended Vacations (15+ days)';
+      }
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(post);
+    });
+    return groups;
+  }, [filtered, groupBy]);
 
   const handleCopy = (post: CommunityPost) => {
     cloneTrip(post.trip);
@@ -483,6 +506,17 @@ export const Community: React.FC = () => {
             {SORT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
 
+          {/* Group By */}
+          <select
+            value={groupBy}
+            onChange={e => setGroupBy(e.target.value as any)}
+            style={{ padding: '0.6rem 0.75rem', fontSize: '0.825rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none', minWidth: '150px' }}
+          >
+            <option value="none">No Grouping</option>
+            <option value="style">Travel Style</option>
+            <option value="duration">Trip Duration</option>
+          </select>
+
           {/* Filter toggle */}
           <button
             onClick={() => setShowFilters(f => !f)}
@@ -555,20 +589,51 @@ export const Community: React.FC = () => {
 
       {/* ── Card Grid */}
       {filtered.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '1.5rem' }}>
-          {filtered.map(post => (
-            <CommunityCard
-              key={post.id}
-              post={post}
-              onLike={() => likeCommunityPost(post.id)}
-              onView={() => {
-                setSharedTripId(post.trip.id);
-                setCurrentView('shared-trip');
-              }}
-              onCopy={() => handleCopy(post)}
-            />
-          ))}
-        </div>
+        groupBy === 'none' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '1.5rem' }}>
+            {filtered.map(post => (
+              <CommunityCard
+                key={post.id}
+                post={post}
+                onLike={() => likeCommunityPost(post.id)}
+                onView={() => {
+                  setSharedTripId(post.trip.id);
+                  setCurrentView('shared-trip');
+                }}
+                onCopy={() => handleCopy(post)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+            {Object.entries(grouped || {}).map(([groupName, items]) => (
+              <div key={groupName} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-color-light)', paddingBottom: '6px' }}>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                    {groupName}
+                  </h2>
+                  <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', fontWeight: 700 }}>
+                    {items.length}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '1.5rem' }}>
+                  {items.map(post => (
+                    <CommunityCard
+                      key={post.id}
+                      post={post}
+                      onLike={() => likeCommunityPost(post.id)}
+                      onView={() => {
+                        setSharedTripId(post.trip.id);
+                        setCurrentView('shared-trip');
+                      }}
+                      onCopy={() => handleCopy(post)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : (
         <div style={{
           padding: '5rem 2rem', textAlign: 'center', backgroundColor: 'var(--bg-secondary)',

@@ -15,6 +15,7 @@ export const MyTrips: React.FC = () => {
   const [dateFilter, setDateFilter] = useState('');
   const [budgetFilter, setBudgetFilter] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'budget' | 'duration'>('newest');
+  const [groupBy, setGroupBy] = useState<'status' | 'style' | 'none'>('status');
   const [tripIdToDelete, setTripIdToDelete] = useState<string | null>(null);
 
   const getDuration = (trip: any) => {
@@ -69,10 +70,15 @@ export const MyTrips: React.FC = () => {
       return 0;
     });
 
-  // Categorize
+  // Categorize for Status
   const ongoingTrips = processedTrips.filter((t) => getTripCategory(t) === 'ongoing');
   const upcomingTrips = processedTrips.filter((t) => getTripCategory(t) === 'upcoming');
   const completedTrips = processedTrips.filter((t) => getTripCategory(t) === 'completed');
+
+  // Categorize for Style
+  const budgetTrips = processedTrips.filter((t) => (t.travelStyle || 'Balanced').toLowerCase() === 'budget');
+  const balancedTrips = processedTrips.filter((t) => (t.travelStyle || 'Balanced').toLowerCase() === 'balanced');
+  const luxuryTrips = processedTrips.filter((t) => (t.travelStyle || 'Balanced').toLowerCase() === 'luxury');
 
   const handleCreateNewTrip = () => {
     setActiveTripId(null); // start fresh
@@ -268,6 +274,32 @@ export const MyTrips: React.FC = () => {
               <option value="duration">Trip Duration</option>
             </select>
           </div>
+
+          {/* Group By selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '180px', flex: 1 }}>
+            <span style={{ fontSize: '0.775rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Map size={13} /> Group By
+            </span>
+            <select
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value as any)}
+              style={{
+                flex: 1,
+                padding: '0.45rem 0.6rem',
+                fontSize: '0.825rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="status">Travel Status</option>
+              <option value="style">Travel Style</option>
+              <option value="none">No Grouping</option>
+            </select>
+          </div>
         </div>
 
         {/* Filters Clear Button */}
@@ -297,92 +329,217 @@ export const MyTrips: React.FC = () => {
       {/* TRIP CATEGORIES SECTIONS */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
         
-        {/* SECTION 1: Ongoing Trips */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              Ongoing Trips
-            </h2>
-            <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)', fontWeight: 700 }}>
-              {ongoingTrips.length}
-            </span>
-          </div>
+        {groupBy === 'status' && (
+          <>
+            {/* SECTION 1: Ongoing Trips */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Ongoing Trips
+                </h2>
+                <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)', fontWeight: 700 }}>
+                  {ongoingTrips.length}
+                </span>
+              </div>
 
-          {ongoingTrips.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-              {ongoingTrips.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  onView={handleViewSummary}
-                  onDelete={setTripIdToDelete}
-                  onEdit={handleEditTrip}
-                  onDuplicate={cloneTrip}
-                />
-              ))}
+              {ongoingTrips.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {ongoingTrips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      onView={handleViewSummary}
+                      onDelete={setTripIdToDelete}
+                      onEdit={handleEditTrip}
+                      onDuplicate={cloneTrip}
+                    />
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState('Ongoing')
+              )}
             </div>
-          ) : (
-            renderEmptyState('Ongoing')
-          )}
-        </div>
 
-        {/* SECTION 2: Upcoming Trips */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              Upcoming Trips
-            </h2>
-            <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', fontWeight: 700 }}>
-              {upcomingTrips.length}
-            </span>
-          </div>
+            {/* SECTION 2: Upcoming Trips */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Upcoming Trips
+                </h2>
+                <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', fontWeight: 700 }}>
+                  {upcomingTrips.length}
+                </span>
+              </div>
 
-          {upcomingTrips.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-              {upcomingTrips.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  onView={handleViewSummary}
-                  onDelete={setTripIdToDelete}
-                  onEdit={handleEditTrip}
-                  onDuplicate={cloneTrip}
-                />
-              ))}
+              {upcomingTrips.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {upcomingTrips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      onView={handleViewSummary}
+                      onDelete={setTripIdToDelete}
+                      onEdit={handleEditTrip}
+                      onDuplicate={cloneTrip}
+                    />
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState('Upcoming')
+              )}
             </div>
-          ) : (
-            renderEmptyState('Upcoming')
-          )}
-        </div>
 
-        {/* SECTION 3: Completed Trips */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              Completed Trips
-            </h2>
-            <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontWeight: 700 }}>
-              {completedTrips.length}
-            </span>
-          </div>
+            {/* SECTION 3: Completed Trips */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Completed Trips
+                </h2>
+                <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontWeight: 700 }}>
+                  {completedTrips.length}
+                </span>
+              </div>
 
-          {completedTrips.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-              {completedTrips.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  onView={handleViewSummary}
-                  onDelete={setTripIdToDelete}
-                  onEdit={handleEditTrip}
-                  onDuplicate={cloneTrip}
-                />
-              ))}
+              {completedTrips.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {completedTrips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      onView={handleViewSummary}
+                      onDelete={setTripIdToDelete}
+                      onEdit={handleEditTrip}
+                      onDuplicate={cloneTrip}
+                    />
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState('Completed')
+              )}
             </div>
-          ) : (
-            renderEmptyState('Completed')
-          )}
-        </div>
+          </>
+        )}
+
+        {groupBy === 'style' && (
+          <>
+            {/* SECTION 1: Budget Travel */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Budget Style Trips
+                </h2>
+                <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-success-light)', color: 'var(--color-success)', fontWeight: 700 }}>
+                  {budgetTrips.length}
+                </span>
+              </div>
+
+              {budgetTrips.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {budgetTrips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      onView={handleViewSummary}
+                      onDelete={setTripIdToDelete}
+                      onEdit={handleEditTrip}
+                      onDuplicate={cloneTrip}
+                    />
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState('Budget')
+              )}
+            </div>
+
+            {/* SECTION 2: Balanced Travel */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Balanced Style Trips
+                </h2>
+                <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', fontWeight: 700 }}>
+                  {balancedTrips.length}
+                </span>
+              </div>
+
+              {balancedTrips.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {balancedTrips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      onView={handleViewSummary}
+                      onDelete={setTripIdToDelete}
+                      onEdit={handleEditTrip}
+                      onDuplicate={cloneTrip}
+                    />
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState('Balanced')
+              )}
+            </div>
+
+            {/* SECTION 3: Luxury Travel */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                  Luxury Style Trips
+                </h2>
+                <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontWeight: 700 }}>
+                  {luxuryTrips.length}
+                </span>
+              </div>
+
+              {luxuryTrips.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                  {luxuryTrips.map((trip) => (
+                    <TripCard
+                      key={trip.id}
+                      trip={trip}
+                      onView={handleViewSummary}
+                      onDelete={setTripIdToDelete}
+                      onEdit={handleEditTrip}
+                      onDuplicate={cloneTrip}
+                    />
+                  ))}
+                </div>
+              ) : (
+                renderEmptyState('Luxury')
+              )}
+            </div>
+          </>
+        )}
+
+        {groupBy === 'none' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                All Trips
+              </h2>
+              <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)', fontWeight: 700 }}>
+                {processedTrips.length}
+              </span>
+            </div>
+
+            {processedTrips.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                {processedTrips.map((trip) => (
+                  <TripCard
+                    key={trip.id}
+                    trip={trip}
+                    onView={handleViewSummary}
+                    onDelete={setTripIdToDelete}
+                    onEdit={handleEditTrip}
+                    onDuplicate={cloneTrip}
+                  />
+                ))}
+              </div>
+            ) : (
+              renderEmptyState('Planned')
+            )}
+          </div>
+        )}
 
       </div>
 

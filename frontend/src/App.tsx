@@ -67,7 +67,7 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname;
-      if (path === '/login') {
+      if (path === '/login' || path === '/register') {
         setIsAuthenticated(false);
       } else if (path.startsWith('/auth/google/callback')) {
         // Handle Google Auth callback parameters
@@ -108,6 +108,8 @@ const MainLayout: React.FC = () => {
         setCurrentView('shared-trip');
       } else if (path === '/profile') {
         setCurrentView('profile');
+      } else if (path === '/calendar') {
+        setCurrentView('calendar');
       } else if (path === '/trips') {
         setCurrentView('my-trips');
       } else if (path === '/trips/new') {
@@ -125,6 +127,10 @@ const MainLayout: React.FC = () => {
         const id = path.replace('/trips/', '').replace('/calendar', '');
         setActiveTripId(id);
         setCurrentView('calendar');
+      } else if (path.startsWith('/trips/') && path.endsWith('/overview')) {
+        const id = path.replace('/trips/', '').replace('/overview', '');
+        setActiveTripId(id);
+        setCurrentView('trip-summary');
       } else if (path.startsWith('/trips/')) {
         const id = path.replace('/trips/', '');
         setActiveTripId(id);
@@ -153,9 +159,9 @@ const MainLayout: React.FC = () => {
     } else if (currentView === 'plan-trip') {
       path = activeTripId ? `/trips/${activeTripId}/itinerary` : '/trips/new';
     } else if (currentView === 'trip-summary') {
-      path = activeTripId ? `/trips/${activeTripId}` : '/trips';
+      path = activeTripId ? `/trips/${activeTripId}/overview` : '/trips';
     } else if (currentView === 'calendar') {
-      path = activeTripId ? `/trips/${activeTripId}/calendar` : '/trips';
+      path = '/calendar';
     } else if (currentView === 'explore') {
       path = '/explore';
     } else if (currentView === 'things-to-do') {
@@ -168,7 +174,7 @@ const MainLayout: React.FC = () => {
       if (window.location.pathname.startsWith('/auth/google/callback')) {
         return; // wait for callback parser to run first
       }
-      path = '/login';
+      path = (window.location.pathname === '/register') ? '/register' : '/login';
     }
 
     if (window.location.pathname !== path) {
