@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { Trip, Activity, CityDestination, CommunityPost } from '../data/mockData';
 import { mockTrips, mockCommunityPosts, mockInsights } from '../data/mockData';
 
-export type ViewType = 'dashboard' | 'my-trips' | 'plan-trip' | 'explore' | 'community' | 'calendar' | 'trip-summary' | 'things-to-do' | 'profile' | 'shared-trip';
+export type ViewType = 'dashboard' | 'my-trips' | 'plan-trip' | 'explore' | 'community' | 'calendar' | 'trip-summary' | 'things-to-do' | 'profile' | 'shared-trip' | 'insights';
 
 export interface ToastMessage {
   id: string;

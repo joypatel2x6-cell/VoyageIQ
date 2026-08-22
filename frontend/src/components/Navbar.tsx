@@ -19,6 +19,7 @@ export const Navbar: React.FC = () => {
       case 'things-to-do': return 'Discover Things To Do';
       case 'profile': return 'My Profile';
       case 'shared-trip': return 'Shared Trip Preview';
+      case 'insights': return 'Smart Insights';
       default: return 'VoyageIQ';
     }
   };
