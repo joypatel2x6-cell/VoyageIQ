@@ -1,5 +1,6 @@
 const express = require('express');
 const tripController = require('../controllers/trip.controller');
+const tripStopRoutes = require('./tripStop.routes');
 const validate = require('../middleware/validate');
 const { requireAuth } = require('../middleware/auth.middleware');
 const {
@@ -13,6 +14,9 @@ const router = express.Router();
 
 // Require authentication for ALL trip endpoints
 router.use(requireAuth);
+
+// Mount trip stops sub-router
+router.use('/:tripId/stops', tripStopRoutes);
 
 /**
  * @route   POST /api/v1/trips
