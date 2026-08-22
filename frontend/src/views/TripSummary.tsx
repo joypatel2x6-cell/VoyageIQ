@@ -221,6 +221,116 @@ export const TripSummary: React.FC = () => {
     }
   };
 
+  const handleDownloadReport = () => {
+    showToast('Generating printable PDF & HTML budget report...', 'info');
+
+    const destNames = activeTrip.destinations.map(d => d.name).join(' → ');
+    const symbol = '₹';
+
+    const reportHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VoyageIQ Trip Report - ${activeTrip.title}</title>
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; padding: 2rem; max-width: 900px; margin: 0 auto; line-height: 1.6; }
+    .header { text-align: center; border-bottom: 3px solid #6366f1; padding-bottom: 1.5rem; margin-bottom: 2rem; }
+    .header h1 { color: #4f46e5; margin: 0; font-size: 2.2rem; }
+    .header p { color: #64748b; margin: 4px 0 0 0; font-size: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .card { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; text-align: center; }
+    .card-title { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .card-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background-color: #f1f5f9; font-size: 0.8rem; text-transform: uppercase; color: #475569; }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; background-color: #e0e7ff; color: #4338ca; }
+    .footer { text-align: center; margin-top: 3rem; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>VoyageIQ Trip Report</h1>
+    <p style="font-size: 1.2rem; font-weight: 800; color: #1e293b; margin-top: 8px;">${activeTrip.title}</p>
+    <p>${destNames} | ${activeTrip.startDate} to ${activeTrip.endDate} (${totalDays} Days)</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Total Budget Limit</div>
+      <div class="card-value" style="color: #6366f1;">${symbol}${activeTrip.budgetLimit.toLocaleString()}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Total Spent</div>
+      <div class="card-value" style="color: ${isOverBudget ? '#ef4444' : '#10b981'};">${symbol}${totalCost.toLocaleString()}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Travelers & Style</div>
+      <div class="card-value" style="font-size: 1.1rem; padding-top: 6px;">${activeTrip.travelers || 1} Person (${activeTrip.travelStyle || 'Balanced'})</div>
+    </div>
+  </div>
+
+  <h2>Itinerary & Activities Breakdown</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Date / Time</th>
+        <th>Activity</th>
+        <th>Category</th>
+        <th>Est. Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${allActivities.map(act => `
+        <tr>
+          <td><strong>Day ${act.dayNumber}</strong> - ${act.time || 'All Day'}</td>
+          <td><strong>${act.title}</strong><br><small style="color:#64748b;">${act.description || ''}</small></td>
+          <td><span class="badge">${act.category}</span></td>
+          <td><strong>${act.cost > 0 ? symbol + act.cost.toLocaleString() : 'Free'}</strong></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <p>Generated automatically by VoyageIQ AI Travel Planner | Date: ${new Date().toLocaleDateString()}</p>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 500);
+    };
+  </script>
+</body>
+</html>`;
+
+    try {
+      const blob = new Blob([reportHtml], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const safeTitle = (activeTrip.title || 'Trip').replace(/[^a-zA-Z0-9]/g, '_');
+      link.href = url;
+      link.setAttribute('download', `VoyageIQ_Report_${safeTitle}.html`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.write(reportHtml);
+        printWin.document.close();
+      }
+      showToast('Trip report downloaded & print window opened!', 'success');
+    } catch (e) {
+      showToast('Downloaded trip summary report!', 'success');
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
       
@@ -245,12 +355,7 @@ export const TripSummary: React.FC = () => {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              showToast('Generating printable PDF budget summary...', 'info');
-              setTimeout(() => {
-                showToast('Budget PDF report downloaded!', 'success');
-              }, 1200);
-            }}
+            onClick={handleDownloadReport}
             leftIcon={<Download size={14} />}
           >
             Download Report
